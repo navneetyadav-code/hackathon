@@ -769,9 +769,9 @@ input:focus {
 
     <div class="sidebar-bottom">
         <div class="user-mini">
-            <div class="user-avatar">H</div>
+            <div class="user-avatar" id="user-avatar">H</div>
             <div>
-                <b>Your Name</b>
+                <b id="user-name-display">Your Name</b>
                 <div class="details">Student</div>
             </div>
         </div>
@@ -781,7 +781,7 @@ input:focus {
 <main class="main">
 
 <header class="topbar">
-    <div class="location">📍 Your Location</div>
+    <div class="location" id="current-location">📍 Your Location</div>
     <div class="top-right">
         <div class="notification">🔔</div>
     </div>
