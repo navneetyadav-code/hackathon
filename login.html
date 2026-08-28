@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Portal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-wrapper {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 45px 40px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    width: 360px;
+    backdrop-filter: blur(12px);
+}
+
+.login-wrapper h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 35px;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 1.5px;
+    background: linear-gradient(135deg, #0f2027, #2c5364);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.toggle-container {
+    display: flex;
+    position: relative;
+    background: #e9ecef;
+    border-radius: 40px;
+    margin-bottom: 40px;
+    padding: 6px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 14px 0;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    z-index: 1;
+    letter-spacing: 0.5px;
+}
+
+.toggle-btn.active {
+    color: #ffffff;
+}
+
+.slider {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: calc(50% - 6px);
+    height: calc(100% - 12px);
+    background: linear-gradient(135deg, #203a43, #2c5364);
+    border-radius: 30px;
+    transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 0;
+    box-shadow: 0 4px 10px rgba(44, 83, 100, 0.3);
+}
+
+.input-field {
+    position: relative;
+    margin-bottom: 25px;
+}
+
+.input-field input {
+    width: 100%;
+    padding: 16px 16px 16px 52px;
+    border: 2px solid #e9ecef;
+    border-radius: 14px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    color: #1a1a1a;
+    background-color: #f8f9fa;
+    letter-spacing: 0.5px;
+}
+
+.input-field input::placeholder {
+    color: #adb5bd;
+    font-weight: 400;
+}
+
+.input-field input:focus {
+    outline: none;
+    border-color: #2c5364;
+    background-color: #ffffff;
+    box-shadow: 0 5px 20px rgba(44, 83, 100, 0.15);
+}
+
+.input-field svg {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    fill: #adb5bd;
+    transition: fill 0.3s;
+    pointer-events: none;
+}
+
+.input-field input:focus + svg, 
+.input-field input:not(:placeholder-shown) + svg {
+    fill: #2c5364;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #203a43, #2c5364);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: 1px;
+    margin-top: 15px;
+}
+
+.action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(44, 83, 100, 0.4);
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14.5px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.signup-link a {
+    color: #2c5364;
+    text-decoration: none;
+    font-weight: 700;
+    transition: color 0.3s ease;
+    margin-left: 5px;
+}
+
+.signup-link a:hover {
+    color: #0f2027;
+    text-decoration: underline;
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrapper">
+    <h2 id="title-text">Host Login</h2>
+    
+    <div class="toggle-container">
+        <div class="slider" id="slider-bg"></div>
+        <button class="toggle-btn active" id="btn-host" onclick="switchRole('Host')">Host</button>
+        <button class="toggle-btn" id="btn-seeker" onclick="switchRole('Seeker')">Seeker</button>
+    </div>
+
+    <form id="auth-form">
+        <div class="input-field">
+            <input type="text" id="username" placeholder="Username" required>
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        
+        <div class="input-field">
+            <input type="password" id="password" placeholder="Password" required>
+            <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM8.9 6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H8.9V6z"/></svg>
+        </div>
+        
+        <button type="submit" class="action-btn">Login</button>
+    </form>
+
+    <div class="signup-link">
+        Don't have an account? <a href="signup.html">Sign up</a>
+    </div>
+</div>
+
+<script>
+    function switchRole(role) {
+        const title = document.getElementById('title-text');
+        const btnHost = document.getElementById('btn-host');
+        const btnSeeker = document.getElementById('btn-seeker');
+        const slider = document.getElementById('slider-bg');
+        
+        title.innerText = role + ' Login';
+        
+        if(role === 'Host') {
+            btnHost.classList.add('active');
+            btnSeeker.classList.remove('active');
+            slider.style.left = '6px';
+        } else {
+            btnSeeker.classList.add('active');
+            btnHost.classList.remove('active');
+            slider.style.left = '50%';
+        }
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+    });
+</script>
+
+</body>
+</html>
