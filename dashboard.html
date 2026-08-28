@@ -57,13 +57,16 @@ body { background: #F5F7FB; color: #172033; min-height: 100vh; }
 .input-group { margin-bottom: 20px; }
 .input-group label { display: block; font-size: 14px; font-weight: bold; color: #172033; margin-bottom: 8px; }
 .input-group input { width: 100%; padding: 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; }
+.input-group select { width: 100%; padding: 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; background: white; }
 .input-group input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.input-group select:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .btn-calc { background: #2563EB; color: white; width: 100%; padding: 15px; border-radius: 10px; font-size: 16px; margin-top: 10px; }
 .result-box { margin-top: 25px; display: none; }
 .alert-success { background: #ECFDF5; color: #065F46; padding: 15px; border-radius: 10px; border: 1px solid #A7F3D0; margin-bottom: 10px; }
 .alert-error { background: #FEF2F2; color: #991B1B; padding: 15px; border-radius: 10px; border: 1px solid #FECACA; margin-bottom: 10px; }
 .result-stat { font-size: 24px; font-weight: bold; margin: 10px 0; }
+.custom-split-grid { display: none; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
 
 /* LISTINGS */
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
@@ -198,8 +201,18 @@ body { background: #F5F7FB; color: #172033; min-height: 100vh; }
 
             <div class="input-group">
                 <label>Number of Roommates (including you)</label>
-                <input type="number" id="calc-roommates" placeholder="e.g. 3" value="1" min="1" required>
+                <input type="number" id="calc-roommates" placeholder="e.g. 3" value="1" min="1" required oninput="renderCustomSplitFields()">
             </div>
+
+            <div class="input-group">
+                <label>Split Mode</label>
+                <select id="calc-split-mode" onchange="renderCustomSplitFields()">
+                    <option value="equal">Equal Split</option>
+                    <option value="custom">Custom Split</option>
+                </select>
+            </div>
+
+            <div id="calc-custom-split" class="custom-split-grid"></div>
 
             <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 25px 0;">
             
@@ -243,7 +256,7 @@ const sessionManager = {
         
         // If no user exists, simulate a logged-in user for demonstration purposes
         if (!user) {
-            user = { firstName: 'Guest', lastName: 'User', email: 'guest@thikana.com' };
+            user = { firstName: 'Navneet', lastName: 'Yadav', email: 'guest@thikana.com' };
             sessionStorage.setItem('thikana_user', JSON.stringify(user));
         } else {
             user = JSON.parse(user);
@@ -274,26 +287,73 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- SPLIT & AFFORDABILITY CALCULATOR ---
+function getRoommateCount() {
+    return Math.max(1, parseInt(document.getElementById('calc-roommates').value) || 1);
+}
+
+function renderCustomSplitFields() {
+    const mode = document.getElementById('calc-split-mode').value;
+    const customBox = document.getElementById('calc-custom-split');
+    const roommates = getRoommateCount();
+
+    customBox.style.display = mode === 'custom' ? 'grid' : 'none';
+    if (mode !== 'custom') {
+        customBox.innerHTML = '';
+        return;
+    }
+
+    customBox.innerHTML = Array.from({ length: roommates }, (_, index) => `
+        <div class="input-group" style="margin-bottom: 0;">
+            <label>Roommate ${index + 1} Amount (₹)</label>
+            <input type="number" class="calc-custom-share" min="0" placeholder="e.g. ${index === 0 ? '6000' : '5000'}">
+        </div>
+    `).join('');
+}
+
 function calculateSplit(e) {
     e.preventDefault();
     
     // Get values
     const rent = parseFloat(document.getElementById('calc-rent').value) || 0;
     const utilities = parseFloat(document.getElementById('calc-util').value) || 0;
-    const roommates = parseInt(document.getElementById('calc-roommates').value) || 1;
+    const roommates = getRoommateCount();
+    const splitMode = document.getElementById('calc-split-mode').value;
     const income = parseFloat(document.getElementById('calc-income').value) || 0;
     const maxPercent = parseFloat(document.getElementById('calc-percent').value) || 30;
 
     // Calculations
     const totalCost = rent + utilities;
-    const perPersonCost = totalCost / roommates;
-    const myRentShare = rent / roommates; // Comparing purely rent against income is standard
+    let perPersonCost = totalCost / roommates;
+    let myRentShare = rent / roommates; // Comparing purely rent against income is standard
+    let splitDetails = '';
+
+    if (splitMode === 'custom') {
+        const customShares = Array.from(document.querySelectorAll('.calc-custom-share')).map(input => parseFloat(input.value) || 0);
+        const customTotal = customShares.reduce((sum, amount) => sum + amount, 0);
+
+        if (customShares.length !== roommates || customShares.some(amount => amount <= 0)) {
+            alert('Please enter a custom amount for every roommate.');
+            return;
+        }
+
+        if (Math.abs(customTotal - totalCost) > 1) {
+            alert(`Custom shares must add up to ₹${totalCost.toFixed(2)}.`);
+            return;
+        }
+
+        perPersonCost = customShares[0];
+        myRentShare = rent > 0 && totalCost > 0 ? perPersonCost * (rent / totalCost) : 0;
+        splitDetails = customShares.map((amount, index) => `
+            <div><strong>Roommate ${index + 1}:</strong> ₹${amount.toFixed(2)} / month</div>
+        `).join('');
+    }
 
     let resultHTML = `
         <div class="alert-success">
-            <div>Fair Split per person:</div>
+            <div>${splitMode === 'custom' ? 'Your Custom Split:' : 'Fair Split per person:'}</div>
             <div class="result-stat">₹${perPersonCost.toFixed(2)} / month</div>
             <small>Total Cost (Rent + Util): ₹${totalCost.toFixed(2)}</small>
+            ${splitDetails ? `<div style="margin-top: 12px;">${splitDetails}</div>` : ''}
         </div>
     `;
 

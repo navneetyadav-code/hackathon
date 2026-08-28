@@ -126,7 +126,27 @@ body.dark-mode .input-field label {
     transition: all 0.3s ease;
 }
 
+.input-field select {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+    color: #1a1a1a;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
 body.dark-mode .input-field input {
+    background-color: #2c2c2c;
+    border-color: #3d3d3d;
+    color: #ffffff;
+}
+
+body.dark-mode .input-field select {
     background-color: #2c2c2c;
     border-color: #3d3d3d;
     color: #ffffff;
@@ -139,7 +159,20 @@ body.dark-mode .input-field input {
     box-shadow: 0 5px 15px rgba(44, 83, 100, 0.1);
 }
 
+.input-field select:focus {
+    outline: none;
+    border-color: #2c5364;
+    background-color: #ffffff;
+    box-shadow: 0 5px 15px rgba(44, 83, 100, 0.1);
+}
+
 body.dark-mode .input-field input:focus {
+    border-color: #bb86fc;
+    background-color: #1a1a1a;
+    box-shadow: 0 5px 15px rgba(187, 134, 252, 0.15);
+}
+
+body.dark-mode .input-field select:focus {
     border-color: #bb86fc;
     background-color: #1a1a1a;
     box-shadow: 0 5px 15px rgba(187, 134, 252, 0.15);
@@ -270,8 +303,18 @@ body.dark-mode .alert-success {
 
     <div class="input-field">
         <label>Number of Roommates</label>
-        <input type="number" id="roommates" placeholder="e.g. 3" required min="1">
+        <input type="number" id="roommates" placeholder="e.g. 3" required min="1" oninput="renderCustomSplitFields()">
     </div>
+
+    <div class="input-field">
+        <label>Split Mode</label>
+        <select id="split-mode" onchange="renderCustomSplitFields()">
+            <option value="equal">Equal Split</option>
+            <option value="custom">Custom Split</option>
+        </select>
+    </div>
+
+    <div id="custom-split-fields" class="input-row" style="flex-wrap: wrap;"></div>
 
     <div class="input-row">
         <div class="input-field">
@@ -310,16 +353,56 @@ body.dark-mode .alert-success {
         }
     }
 
+    function getRoommateCount() {
+        return Math.max(1, parseInt(document.getElementById('roommates').value) || 1);
+    }
+
+    function renderCustomSplitFields() {
+        const mode = document.getElementById('split-mode').value;
+        const container = document.getElementById('custom-split-fields');
+        const roommates = getRoommateCount();
+
+        if (mode !== 'custom') {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = Array.from({ length: roommates }, (_, index) => `
+            <div class="input-field">
+                <label>Roommate ${index + 1} Amount</label>
+                <input type="number" class="custom-share" min="0" placeholder="e.g. ${index === 0 ? '6000' : '5000'}">
+            </div>
+        `).join('');
+    }
+
     function calculateFairSplit() {
         const rent = parseFloat(document.getElementById('rent').value) || 0;
         const utilities = parseFloat(document.getElementById('utilities').value) || 0;
-        const roommates = parseInt(document.getElementById('roommates').value) || 1;
+        const roommates = getRoommateCount();
+        const splitMode = document.getElementById('split-mode').value;
         const income = parseFloat(document.getElementById('income').value) || 0;
         const percentage = parseFloat(document.getElementById('percentage').value) || 0;
 
         const totalCost = rent + utilities;
-        const perPersonCost = totalCost / roommates;
+        let perPersonCost = totalCost / roommates;
         const maxAllowedCost = (income * percentage) / 100;
+
+        if (splitMode === 'custom') {
+            const customShares = Array.from(document.querySelectorAll('.custom-share')).map(input => parseFloat(input.value) || 0);
+            const customTotal = customShares.reduce((sum, amount) => sum + amount, 0);
+
+            if (customShares.length !== roommates || customShares.some(amount => amount <= 0)) {
+                alert('Please enter a custom amount for every roommate.');
+                return;
+            }
+
+            if (Math.abs(customTotal - totalCost) > 1) {
+                alert(`Custom shares must add up to ₹${totalCost.toFixed(2)}.`);
+                return;
+            }
+
+            perPersonCost = customShares[0];
+        }
 
         document.getElementById('final-amount').innerText = '₹' + perPersonCost.toFixed(2);
         document.getElementById('result-container').style.display = 'block';
