@@ -19,27 +19,35 @@
             font-size: 24px;
             cursor: pointer;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s;
+            transition: transform 0.3s, background-color 0.3s;
             z-index: 1000;
         }
 
         .floating-chat-btn:hover {
             transform: scale(1.1);
+            background-color: #0056b3;
         }
 
         /* Chat Pop-up Box Design */
         .chat-popup {
-            display: none; /* Hidden by default */
+            display: none; 
             position: fixed;
             bottom: 100px;
             right: 30px;
             width: 320px;
             background-color: white;
             border-radius: 10px;
-            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0px 5px 25px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             overflow: hidden;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
+            /* Enhancement: Smooth slide-in animation */
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Header Design */
@@ -58,8 +66,14 @@
             background: none;
             border: none;
             color: white;
-            font-size: 20px;
+            font-size: 24px;
+            line-height: 1;
             cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #ffcccc;
         }
 
         /* Form Layout */
@@ -77,6 +91,14 @@
             border-radius: 5px;
             font-size: 14px;
             box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        /* Enhancement: Focus states for better UX */
+        .chat-form input:focus, .chat-form textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
         }
 
         .chat-form textarea {
@@ -85,7 +107,7 @@
         }
 
         .submit-btn {
-            background-color: #28a745; /* Green Color for Submit */
+            background-color: #28a745; 
             color: white;
             border: none;
             padding: 10px;
@@ -93,73 +115,88 @@
             font-size: 16px;
             cursor: pointer;
             font-weight: bold;
+            transition: background-color 0.3s;
         }
 
-        .submit-btn:hover {
+        .submit-btn:hover:not(:disabled) {
             background-color: #218838;
+        }
+
+        /* Enhancement: Disabled state for loading */
+        .submit-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
 
-    <!-- 1. Floating Button -->
-    <button class="floating-chat-btn" id="openChatBtn">💬</button>
+    <!-- Enhancement: Added aria-labels for screen reader accessibility -->
+    <button class="floating-chat-btn" id="openChatBtn" aria-label="Open messaging widget">💬</button>
 
-    <!-- 2. Message Pop-up Box -->
-    <div class="chat-popup" id="chatPopup">
-        <div class="chat-header">
-            Message 
-            <button class="close-btn" id="closeChatBtn">&times;</button>
+    <div class="chat-popup" id="chatPopup" role="dialog" aria-labelledby="chatHeader">
+        <div class="chat-header" id="chatHeader">
+            Message Doctor
+            <button class="close-btn" id="closeChatBtn" aria-label="Close messaging widget">&times;</button>
         </div>
         <form class="chat-form" id="patientForm">
             <input type="text" id="patientName" placeholder="Your Name" required>
-            <input type="tel" id="patientPhone" placeholder="Mobile Number" required>
+            <!-- Enhancement: Added basic phone number pattern validation -->
+            <input type="tel" id="patientPhone" placeholder="Mobile Number (e.g. 9876543210)" pattern="[0-9]{10,15}" title="Please enter a valid mobile number (10-15 digits)" required>
             <textarea id="patientMessage" placeholder="Write your message here..." required></textarea>
-            <button type="submit" class="submit-btn">Send Message</button>
+            <button type="submit" class="submit-btn" id="submitBtn">Send Message</button>
         </form>
     </div>
 
-    <!-- 3. JavaScript -->
     <script>
         const openBtn = document.getElementById('openChatBtn');
         const closeBtn = document.getElementById('closeChatBtn');
         const chatPopup = document.getElementById('chatPopup');
         const patientForm = document.getElementById('patientForm');
+        const submitBtn = document.getElementById('submitBtn');
 
-        // Open chat window on button click
         openBtn.addEventListener('click', () => {
             chatPopup.style.display = 'block';
             openBtn.style.display = 'none'; 
+            // Enhancement: Auto-focus the first input when opened
+            document.getElementById('patientName').focus();
         });
 
-        // Close chat window on 'x' click
         closeBtn.addEventListener('click', () => {
             chatPopup.style.display = 'none';
             openBtn.style.display = 'block'; 
         });
 
-        // Handle form submission
         patientForm.addEventListener('submit', (e) => {
             e.preventDefault(); 
+
+            // Enhancement: Loading state simulation
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.textContent = 'Sending...';
+            submitBtn.disabled = true;
 
             const name = document.getElementById('patientName').value;
             const phone = document.getElementById('patientPhone').value;
             const message = document.getElementById('patientMessage').value;
 
-            // Log data to console for now
-            console.log("Patient Name:", name);
-            console.log("Phone Number:", phone);
-            console.log("Message:", message);
+            // Simulating a network request delay (1 second)
+            setTimeout(() => {
+                console.log("Patient Name:", name);
+                console.log("Phone Number:", phone);
+                console.log("Message:", message);
 
-            // Show English alert message
-            alert(`Thank you ${name}! Your message has been sent to the doctor. We will contact you soon.`);
+                alert(`Thank you ${name}! Your message has been sent to the doctor. We will contact you soon.`);
 
-            // Reset and close form
-            patientForm.reset();
-            chatPopup.style.display = 'none';
-            openBtn.style.display = 'block';
+                patientForm.reset();
+                chatPopup.style.display = 'none';
+                openBtn.style.display = 'block';
+
+                // Reset button state
+                submitBtn.textContent = originalBtnText;
+                submitBtn.disabled = false;
+            }, 1000);
         });
     </script>
-
 </body>
 </html>
