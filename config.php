@@ -9,7 +9,10 @@ $dbName = 'if0_41650456_login_thikana';
 try {
     $pdo = new PDO("mysql:host=$host", $dbUser, $dbPass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch (PDOException $e) {
+    
+    $pdo->exec("USE `$dbName`");
+    $pdo->exec($tableQuery);
+} catch (PDOException $e) {
     die(json_encode(['status' => 'error', 'message' => "Database error: " . $e->getMessage()]));
 }
 
