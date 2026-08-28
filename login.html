@@ -1,154 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Thikana - Rent Affordability & Roommate Finder</title>
-    <link rel="stylesheet" href="assets/css/login.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Thikana - Rent Affordability & Roommate Finder</title>
+<link rel="stylesheet" href="assets/css/login.css">
+<style>
+.auth-divider{display:flex;align-items:center;text-align:center;margin:24px 0;color:#718096;font-size:.875rem}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;border-bottom:1px solid #E2E8F0}
+.auth-divider span{padding:0 12px}
+.social-login-group{display:flex;gap:12px;margin-bottom:16px}
+.btn-social{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;color:#1A202C;font-weight:500;font-size:.9rem;cursor:pointer;transition:all .2s}
+.btn-social:hover{background:#F7FAFC;border-color:#CBD5E0}
+</style>
 </head>
 <body>
+<div class="app-wrapper">
+    <aside class="hero-section">
+        <div class="slideshow">
+            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200" alt="Modern Apartment" class="slide">
+            <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=1200" alt="Bunk beds" class="slide">
+            <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=1200" alt="Shared Living" class="slide">
+        </div>
+        <div class="hero-content">
+            <h2>Find your perfect space.<br><span>Split the cost.</span></h2>
+            <p>Join Thikana today to discover affordable shared PGs, beautiful flats, and compatible roommates matching your vibe.</p>
+        </div>
+    </aside>
 
-    <div class="app-wrapper">
-        <aside class="hero-section">
-            <div class="slideshow">
-                <!-- Slide 1: Modern Apartment (Original) -->
-                <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200" alt="Modern Apartment" class="slide">
-                
-                <!-- Slide 2: Replaced Happy Roommate -> Bunk Beds next to window -->
-                <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=1200" alt="Bunk beds next to window" class="slide">
-                
-                <!-- Slide 3: Replaced Shared Living -> People sharing space with laptop -->
-                <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=1200" alt="Shared Living Space with Laptop" class="slide">
+    <main class="form-section">
+        <div class="form-container">
+            <a href="#" class="brand-logo">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3zm0 2.5l5.5 4.95V18h-1v-6H7.5v6h-1v-7.55L12 5.5z"/><path d="M12 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/></svg>
+                Thikana
+            </a>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchTab('login')" id="tab-login">Log In</div>
+                <div class="auth-tab" onclick="switchTab('signup')" id="tab-signup">Sign Up</div>
             </div>
-            <div class="hero-content">
-                <h2>Find your perfect space.<br><span>Split the cost.</span></h2>
-                <p>Join Thikana today to discover affordable shared PGs, beautiful flats, and compatible roommates matching your vibe.</p>
-            </div>
-        </aside>
 
-        <main class="form-section">
-            <div class="form-container">
-                <a href="#" class="brand-logo">
-                    <!-- Home/Building Icon -->
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3zm0 2.5l5.5 4.95V18h-1v-6H7.5v6h-1v-7.55L12 5.5z"/>
-                        <path d="M12 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
-                    </svg>
-                    Thikana
-                </a>
-
-                <div class="auth-tabs">
-                    <div class="auth-tab active" onclick="switchTab('login')" id="tab-login">Log In</div>
-                    <div class="auth-tab" onclick="switchTab('signup')" id="tab-signup">Sign Up</div>
-                </div>
-
-                <div class="auth-view active" id="view-login">
-                    <div class="form-header">
-                        <h3>Welcome back!</h3>
-                        <p>Log in to manage your spaces and roommate requests.</p>
+            <!-- LOGIN VIEW -->
+            <div class="auth-view active" id="view-login">
+                <div class="form-header"><h3>Welcome back!</h3><p>Log in to manage your spaces and roommate requests.</p></div>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="input-group">
+                        <input type="email" id="logEmail" class="input-field" placeholder=" " required>
+                        <label for="logEmail" class="input-label">Email Address</label>
                     </div>
-
-                    <form id="loginForm" onsubmit="handleLogin(event)">
-                        <div class="input-group">
-                            <input type="email" id="logEmail" class="input-field" placeholder=" " required>
-                            <label for="logEmail" class="input-label">Email Address</label>
-                        </div>
-
-                        <div class="input-group">
-                            <input type="password" id="logPassword" class="input-field" placeholder=" " required>
-                            <label for="logPassword" class="input-label">Password</label>
-                            <button type="button" class="pwd-toggle" onclick="togglePassword('logPassword')" aria-label="Toggle Password Visibility">
-                                <!-- Eye Icon -->
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            </button>
-                        </div>
-
-                        <div class="form-footer" style="margin-bottom: 24px;">
-                            <label class="checkbox-container">
-                                <input type="checkbox" id="rememberMe">
-                                <span>Remember me</span>
-                            </label>
-                            <a href="#" class="forgot-link">Forgot Password?</a>
-                        </div>
-
-                        <button type="submit" class="btn-primary" id="btn-login">
-                            Sign In
-                        </button>
-                        
-                        <div id="login-alert" class="alert-message"></div>
-                    </form>
-                </div>
-
-                <div class="auth-view" id="view-signup">
-                    <div class="form-header">
-                        <h3>Create an account</h3>
-                        <p>Start your journey to affordable living today.</p>
+                    <div class="input-group">
+                        <input type="password" id="logPassword" class="input-field" placeholder=" " required>
+                        <label for="logPassword" class="input-label">Password</label>
+                        <button type="button" class="pwd-toggle" onclick="togglePassword('logPassword')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
                     </div>
-
-                    <form id="signupForm" onsubmit="handleSignup(event)">
-                        
-                        <div class="pref-group">
-                            <span class="pref-label-main">I am a</span>
-                            <div class="pref-options">
-                                <div class="pref-option">
-                                    <input type="radio" id="role-seeker" name="role" value="seeker" checked required>
-                                    <label for="role-seeker">Seeker</label>
-                                </div>
-                                <div class="pref-option">
-                                    <input type="radio" id="role-host" name="role" value="host" required>
-                                    <label for="role-host">Host</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="input-row">
-                            <div class="input-group">
-                                <input type="text" id="regFirstName" class="input-field" placeholder=" " required>
-                                <label for="regFirstName" class="input-label">First Name</label>
-                            </div>
-                            <div class="input-group">
-                                <input type="text" id="regLastName" class="input-field" placeholder=" " required>
-                                <label for="regLastName" class="input-label">Last Name</label>
-                            </div>
-                        </div>
-
-                        <div class="input-group">
-                            <input type="email" id="regEmail" class="input-field" placeholder=" " required>
-                            <label for="regEmail" class="input-label">Email Address</label>
-                        </div>
-                        
-                        <div class="input-group">
-                            <input type="tel" id="regPhone" class="input-field" placeholder=" " pattern="[0-9]{10}" title="Enter a valid 10-digit number" required>
-                            <label for="regPhone" class="input-label">Mobile Number</label>
-                        </div>
-
-                        <div class="input-row">
-                            <div class="input-group">
-                                <input type="password" id="regPassword" class="input-field" placeholder=" " minlength="8" required>
-                                <label for="regPassword" class="input-label">Password</label>
-                            </div>
-                            <div class="input-group">
-                                <input type="password" id="regConfirmPassword" class="input-field" placeholder=" " required>
-                                <label for="regConfirmPassword" class="input-label">Confirm Password</label>
-                            </div>
-                        </div>
-
-                        <label class="checkbox-container" style="margin: 16px 0 24px;">
-                            <input type="checkbox" required>
-                            <span>I agree to the <a href="#" class="forgot-link">Terms</a> and <a href="#" class="forgot-link">Privacy Policy</a></span>
-                        </label>
-
-                        <button type="submit" class="btn-primary" id="btn-signup">
-                            Create Account
-                        </button>
-
-                        <div id="signup-alert" class="alert-message"></div>
-                    </form>
-                </div>
-                
+                    <div class="form-footer" style="margin-bottom: 24px;">
+                        <label class="checkbox-container"><input type="checkbox" id="rememberMe"><span>Remember me</span></label>
+                        <a href="#" class="forgot-link">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-login">Sign In</button>
+                    
+                    <div class="auth-divider"><span>or continue with</span></div>
+                    <div class="social-login-group">
+                        <button type="button" class="btn-social"><svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C41 35.1 44 29.9 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>Google</button>
+                        <button type="button" class="btn-social"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.1 20.3c-1 .9-2.1.8-3.1.3-1.1-.5-2.1-.5-3.2 0-1.4.6-2.2.4-3.1-.3C2.8 15.3 3.5 7.6 9.1 7.3c1.3.1 2.3.7 3.1.8 1.2-.2 2.3-.9 3.5-.8 1.5.1 2.8.7 3.5 1.8-3 1.8-2.6 5.9.4 7-.7 1.7-1.6 3.3-2.5 4.2zM12 7.3c-.1-2.2 1.7-4.1 3.7-4.3.3 2.3-1.9 4.3-3.7 4.3z"/></svg>Apple</button>
+                    </div>
+                    <div id="login-alert" class="alert-message"></div>
+                </form>
             </div>
-        </main>
-    </div>
-</body>
+
+            <!-- SIGNUP VIEW -->
+            <div class="auth-view" id="view-signup">
+                <div class="form-header"><h3>Create an account</h3><p>Start your journey to affordable living today.</p></div>
+                <form id="signupForm" onsubmit="handleSignup(event)">
+                    <div class="pref-group">
+                        <span class="pref-label-main">I am a</span>
+                        <div class="pref-options">
+                            <div class="pref-option"><input type="radio" id="role-seeker" name="role" value="seeker" checked required><label for="role-seeker">Seeker</label></div>
+                            <div class="pref-option"><input type="radio" id="role-host" name="role" value="host" required><label for="role-host">Host</label></div>
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group"><input type="text" id="regFirst" class="input-field" placeholder=" " required><label for="regFirst" class="input-label">First Name</label></div>
+                        <div class="input-group"><input type="text" id="regLast" class="input-field" placeholder=" " required><label for="regLast" class="input-label">Last Name</label></div>
+                    </div>
+                    <div class="input-group"><input type="email" id="regEmail" class="input-field" placeholder=" " required><label for="regEmail" class="input-label">Email</label></div>
+                    <div class="input-group"><input type="tel" id="regPhone" class="input-field" placeholder=" " pattern="[0-9]{10}" required><label for="regPhone" class="input-label">Mobile</label></div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <input type="password" id="regPwd" class="input-field" placeholder=" " minlength="8" required><label for="regPwd" class="input-label">Password</label>
+                            <button type="button" class="pwd-toggle" onclick="togglePassword('regPwd')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="regConfPwd" class="input-field" placeholder=" " required><label for="regConfPwd" class="input-label">Confirm</label>
+                            <button type="button" class="pwd-toggle" onclick="togglePassword('regConfPwd')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                        </div>
+                    </div>
+                    <label class="checkbox-container" style="margin:16px 0 24px"><input type="checkbox" required><span>I agree to the <a href="#" class="forgot-link">Terms</a></span></label>
+                    <button type="submit" class="btn-primary" id="btn-signup">Create Account</button>
+                    
+                    <div class="auth-divider"><span>or sign up with</span></div>
+                    <div class="social-login-group">
+                        <button type="button" class="btn-social"><svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C41 35.1 44 29.9 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>Google</button>
+                        <button type="button" class="btn-social"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.1 20.3c-1 .9-2.1.8-3.1.3-1.1-.5-2.1-.5-3.2 0-1.4.6-2.2.4-3.1-.3C2.8 15.3 3.5 7.6 9.1 7.3c1.3.1 2.3.7 3.1.8 1.2-.2 2.3-.9 3.5-.8 1.5.1 2.8.7 3.5 1.8-3 1.8-2.6 5.9.4 7-.7 1.7-1.6 3.3-2.5 4.2zM12 7.3c-.1-2.2 1.7-4.1 3.7-4.3.3 2.3-1.9 4.3-3.7 4.3z"/></svg>Apple</button>
+                    </div>
+                    <div id="signup-alert" class="alert-message"></div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
 <script src="assets/js/login.js"></script>
+</body>
 </html>
