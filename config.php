@@ -7,12 +7,8 @@ $dbPass = 'WrZyeiySYvUhlj';
 $dbName = 'if0_41650456_login_thikana';
 
 try {
-    $pdo = new PDO("mysql:host=$host", $dbUser, $dbPass);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbName;charset=utf8mb4", $dbUser, $dbPass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    $pdo->exec("USE `$dbName`");
-
     $tableQuery = "CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         role ENUM('seeker', 'host') NOT NULL DEFAULT 'seeker',
