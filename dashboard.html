@@ -350,25 +350,6 @@ function renderListings(containerId) {
 window.addEventListener('DOMContentLoaded', () => {
     renderListings('home-listings');
     renderListings('explore-listings');
-    
-    // Geolocation Request
-    const locElement = document.getElementById('current-location');
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(async function(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                const data = await response.json();
-                const locationName = data.address.city || data.address.town || data.address.state || "Your Location";
-                locElement.innerText = `📍 ${locationName}`;
-            } catch (error) {
-                locElement.innerText = "📍 Location unavailable";
-            }
-        }, function(error) {
-            locElement.innerText = "📍 Location permission denied";
-        });
-    }
 });
 
 function openPage(pageName, element) {
