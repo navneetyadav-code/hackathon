@@ -64,9 +64,12 @@ body { background: #F5F7FB; color: #172033; min-height: 100vh; }
 .btn-calc { background: #2563EB; color: white; width: 100%; padding: 15px; border-radius: 10px; font-size: 16px; margin-top: 10px; }
 .result-box { margin-top: 25px; display: none; }
 .alert-success { background: #ECFDF5; color: #065F46; padding: 15px; border-radius: 10px; border: 1px solid #A7F3D0; margin-bottom: 10px; }
+.alert-warning { background: #FFFBEB; color: #92400E; padding: 15px; border-radius: 10px; border: 1px solid #FDE68A; margin-bottom: 10px; }
 .alert-error { background: #FEF2F2; color: #991B1B; padding: 15px; border-radius: 10px; border: 1px solid #FECACA; margin-bottom: 10px; }
 .result-stat { font-size: 24px; font-weight: bold; margin: 10px 0; }
 .custom-split-grid { display: none; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+.score-meter { height: 10px; background: #E2E8F0; border-radius: 999px; overflow: hidden; margin-top: 12px; }
+.score-meter span { display: block; height: 100%; border-radius: 999px; background: #16A34A; }
 
 /* LISTINGS */
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
@@ -228,6 +231,28 @@ body { background: #F5F7FB; color: #172033; min-height: 100vh; }
                 </div>
             </div>
 
+            <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 25px 0;">
+
+            <div class="section-header" style="margin-bottom: 10px;"><h3>Monthly Expenses (Optional)</h3></div>
+            <div class="calc-row">
+                <div class="input-group">
+                    <label>Food & Groceries (₹)</label>
+                    <input type="number" id="calc-food" placeholder="e.g. 6000" value="0" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Travel & Commute (₹)</label>
+                    <input type="number" id="calc-travel" placeholder="e.g. 2500" value="0" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Personal/Other Expenses (₹)</label>
+                    <input type="number" id="calc-other" placeholder="e.g. 4000" value="0" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Monthly Savings Goal (₹)</label>
+                    <input type="number" id="calc-savings" placeholder="e.g. 8000" value="0" min="0">
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-calc">Calculate Split</button>
         </form>
 
@@ -310,6 +335,29 @@ function renderCustomSplitFields() {
     `).join('');
 }
 
+function getBudgetHealth(score) {
+    if (score >= 80) return { label: 'Excellent', className: 'alert-success', color: '#16A34A' };
+    if (score >= 60) return { label: 'Comfortable', className: 'alert-success', color: '#22C55E' };
+    if (score >= 40) return { label: 'Tight', className: 'alert-warning', color: '#F59E0B' };
+    return { label: 'Risky', className: 'alert-error', color: '#DC2626' };
+}
+
+function calculateBudgetScore(income, housingShare, lifestyleExpenses, savingsGoal, maxPercent) {
+    if (income <= 0) return null;
+
+    const housingPercent = (housingShare / income) * 100;
+    const spendingPercent = ((housingShare + lifestyleExpenses) / income) * 100;
+    const savingsPercent = (savingsGoal / income) * 100;
+    const leftover = income - housingShare - lifestyleExpenses - savingsGoal;
+
+    const housingScore = Math.max(0, 40 - Math.max(0, housingPercent - maxPercent) * 1.6);
+    const spendingScore = Math.max(0, 35 - Math.max(0, spendingPercent - 65) * 1.4);
+    const savingsScore = savingsPercent >= 20 ? 25 : savingsPercent >= 10 ? 18 : savingsPercent >= 5 ? 10 : 4;
+    const leftoverPenalty = leftover < 0 ? Math.min(25, Math.abs(leftover) / income * 100) : 0;
+
+    return Math.max(0, Math.min(100, Math.round(housingScore + spendingScore + savingsScore - leftoverPenalty)));
+}
+
 function calculateSplit(e) {
     e.preventDefault();
     
@@ -320,6 +368,10 @@ function calculateSplit(e) {
     const splitMode = document.getElementById('calc-split-mode').value;
     const income = parseFloat(document.getElementById('calc-income').value) || 0;
     const maxPercent = parseFloat(document.getElementById('calc-percent').value) || 30;
+    const food = parseFloat(document.getElementById('calc-food').value) || 0;
+    const travel = parseFloat(document.getElementById('calc-travel').value) || 0;
+    const other = parseFloat(document.getElementById('calc-other').value) || 0;
+    const savingsGoal = parseFloat(document.getElementById('calc-savings').value) || 0;
 
     // Calculations
     const totalCost = rent + utilities;
@@ -348,6 +400,12 @@ function calculateSplit(e) {
         `).join('');
     }
 
+    const lifestyleExpenses = food + travel + other;
+    const fullMonthlyExpense = perPersonCost + lifestyleExpenses;
+    const plannedOutflow = fullMonthlyExpense + savingsGoal;
+    const budgetScore = calculateBudgetScore(income, perPersonCost, lifestyleExpenses, savingsGoal, maxPercent);
+    const budgetHealth = budgetScore === null ? null : getBudgetHealth(budgetScore);
+
     let resultHTML = `
         <div class="alert-success">
             <div>${splitMode === 'custom' ? 'Your Custom Split:' : 'Fair Split per person:'}</div>
@@ -355,11 +413,18 @@ function calculateSplit(e) {
             <small>Total Cost (Rent + Util): ₹${totalCost.toFixed(2)}</small>
             ${splitDetails ? `<div style="margin-top: 12px;">${splitDetails}</div>` : ''}
         </div>
+        <div class="alert-success" style="margin-top: 15px;">
+            <strong>Full Monthly Expense</strong>
+            <div class="result-stat">₹${fullMonthlyExpense.toFixed(2)} / month</div>
+            <small>Housing share + food, travel and other monthly expenses.</small>
+            ${savingsGoal > 0 ? `<div style="margin-top: 8px;">Planned with savings: <strong>₹${plannedOutflow.toFixed(2)}</strong></div>` : ''}
+        </div>
     `;
 
     // Affordability check (if income provided)
     if (income > 0) {
         const rentToIncomeRatio = (myRentShare / income) * 100;
+        const expenseRatio = (fullMonthlyExpense / income) * 100;
         
         if (rentToIncomeRatio > maxPercent) {
             resultHTML += `
@@ -377,6 +442,14 @@ function calculateSplit(e) {
                 </div>
             `;
         }
+
+        resultHTML += `
+            <div class="${budgetHealth.className}" style="margin-top: 15px;">
+                <strong>Budget Score: ${budgetScore}/100 - ${budgetHealth.label}</strong><br>
+                Your full monthly expense uses <strong>${expenseRatio.toFixed(1)}%</strong> of your income before savings.
+                <div class="score-meter"><span style="width: ${budgetScore}%; background: ${budgetHealth.color};"></span></div>
+            </div>
+        `;
     }
 
     const resultsDiv = document.getElementById('calc-results');
