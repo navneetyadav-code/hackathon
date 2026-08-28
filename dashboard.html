@@ -1,13 +1,4 @@
-<?php
-session_start();
-// RBAC Check: Ensure user is logged in and is a 'seeker'
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'seeker') {
-    header("Location: index.php"); // Redirect to login
-    exit;
-}
-$firstName = explode(' ', trim($_SESSION['user_name']))[0];
-$firstInitial = strtoupper(substr($firstName, 0, 1));
-?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
