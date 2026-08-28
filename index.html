@@ -4,10 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>RoomMate</title>
+<title>Thikana</title>
 
 <style>
-
 * {
     margin: 0;
     padding: 0;
@@ -16,13 +15,13 @@
 }
 
 body {
-    background: #f5f6f8;
-    color: #222;
+    background: #F5F7FB;
+    color: #172033;
     min-height: 100vh;
 }
 
 /* =========================
-   DESKTOP LAYOUT
+   APP
 ========================= */
 
 .app {
@@ -30,13 +29,17 @@ body {
     min-height: 100vh;
 }
 
-/* SIDEBAR */
+
+/* =========================
+   SIDEBAR
+========================= */
 
 .sidebar {
     width: 240px;
     height: 100vh;
-    background: white;
-    border-right: 1px solid #e5e5e5;
+
+    background: #102A43;
+    color: white;
 
     position: fixed;
     left: 0;
@@ -51,13 +54,17 @@ body {
 .logo {
     font-size: 25px;
     font-weight: bold;
+
     margin-bottom: 45px;
     padding-left: 12px;
+
+    color: white;
 }
 
 .logo span {
-    color: #555;
+    color: #93C5FD;
 }
+
 
 /* NAVIGATION */
 
@@ -69,25 +76,28 @@ body {
 
 .nav-item {
     padding: 14px 15px;
+
     border-radius: 10px;
 
     cursor: pointer;
 
     display: flex;
     align-items: center;
+
     gap: 14px;
 
-    color: #666;
+    color: #CBD5E1;
 
     transition: 0.2s;
 }
 
 .nav-item:hover {
-    background: #f1f1f1;
+    background: #1D3B5A;
+    color: white;
 }
 
 .nav-item.active {
-    background: #222;
+    background: #2563EB;
     color: white;
 }
 
@@ -95,18 +105,21 @@ body {
     font-size: 20px;
 }
 
+
 /* USER */
 
 .sidebar-bottom {
     margin-top: auto;
 
-    border-top: 1px solid #eee;
+    border-top: 1px solid #28445F;
+
     padding-top: 20px;
 }
 
 .user-mini {
     display: flex;
     align-items: center;
+
     gap: 10px;
 }
 
@@ -116,7 +129,9 @@ body {
 
     border-radius: 50%;
 
-    background: #ddd;
+    background: #D9E2EC;
+
+    color: #102A43;
 
     display: flex;
     align-items: center;
@@ -125,8 +140,9 @@ body {
     font-weight: bold;
 }
 
+
 /* =========================
-   MAIN CONTENT
+   MAIN
 ========================= */
 
 .main {
@@ -137,6 +153,7 @@ body {
     min-height: 100vh;
 }
 
+
 /* TOP BAR */
 
 .topbar {
@@ -144,23 +161,26 @@ body {
 
     background: white;
 
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid #E2E8F0;
 
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     padding: 0 45px;
 }
 
 .location {
-    color: #666;
+    color: #64748B;
     font-size: 14px;
 }
 
 .top-right {
     display: flex;
     align-items: center;
+
     gap: 25px;
 }
 
@@ -169,7 +189,10 @@ body {
     cursor: pointer;
 }
 
-/* PAGE */
+
+/* =========================
+   PAGE
+========================= */
 
 .page {
     display: none;
@@ -177,6 +200,7 @@ body {
     padding: 40px 50px;
 
     max-width: 1400px;
+
     margin: auto;
 }
 
@@ -184,20 +208,24 @@ body {
     display: block;
 }
 
+
 /* HEADINGS */
 
 .page-title {
     font-size: 32px;
+
     margin-bottom: 8px;
 }
 
 .page-subtitle {
-    color: #777;
+    color: #64748B;
+
     margin-bottom: 30px;
 }
 
+
 /* =========================
-   HOME
+   SEARCH
 ========================= */
 
 .search-box {
@@ -205,7 +233,10 @@ body {
 
     padding: 17px 20px;
 
-    border: 1px solid #ddd;
+    background: white;
+
+    border: 1px solid #D9E2EC;
+
     border-radius: 12px;
 
     font-size: 15px;
@@ -216,10 +247,13 @@ body {
 }
 
 .search-box:focus {
-    border-color: #888;
+    border-color: #2563EB;
 }
 
-/* FEATURE GRID */
+
+/* =========================
+   FEATURE CARDS
+========================= */
 
 .feature-grid {
     display: grid;
@@ -239,32 +273,40 @@ body {
     min-height: 190px;
 
     display: flex;
+
     flex-direction: column;
+
     justify-content: space-between;
 }
 
+
+/* NAVY CARD */
+
 .dark-card {
-    background: #222;
+    background: #102A43;
+
     color: white;
 }
 
-.green-card {
-    background: #dff5e7;
-    color: #155d35;
-}
-
-.feature-card p {
-    margin-top: 8px;
-    color: #777;
-}
-
 .dark-card p {
-    color: #ccc;
+    color: #CBD5E1;
+}
+
+
+/* LIGHT BLUE CARD */
+
+.green-card {
+    background: #EFF6FF;
+
+    color: #102A43;
 }
 
 .green-card p {
-    color: #35724e;
+    color: #64748B;
 }
+
+
+/* BUTTONS */
 
 .btn {
     width: fit-content;
@@ -282,13 +324,16 @@ body {
 
 .dark-card .btn {
     background: white;
-    color: #222;
+
+    color: #102A43;
 }
 
 .green-card .btn {
-    background: #155d35;
+    background: #2563EB;
+
     color: white;
 }
+
 
 /* =========================
    LISTINGS
@@ -296,7 +341,9 @@ body {
 
 .section-header {
     display: flex;
+
     justify-content: space-between;
+
     align-items: center;
 
     margin-bottom: 18px;
@@ -307,9 +354,11 @@ body {
 }
 
 .view-all {
-    color: #666;
+    color: #2563EB;
+
     cursor: pointer;
 }
+
 
 .listing-grid {
     display: grid;
@@ -320,27 +369,41 @@ body {
     gap: 20px;
 }
 
+
 .listing {
     background: white;
 
-    border: 1px solid #eee;
+    border: 1px solid #E2E8F0;
 
     border-radius: 15px;
 
     overflow: hidden;
+
+    transition: 0.2s;
 }
+
+.listing:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 8px 25px rgba(16, 42, 67, 0.08);
+}
+
 
 .listing-image {
     height: 150px;
 
-    background: #ddd;
+    background: #EAF2FB;
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     font-size: 45px;
 }
+
 
 .listing-content {
     padding: 18px;
@@ -352,29 +415,38 @@ body {
 
 .price {
     font-size: 19px;
+
     font-weight: bold;
+
+    color: #102A43;
 
     margin-bottom: 8px;
 }
 
 .details {
-    color: #777;
+    color: #64748B;
+
     font-size: 14px;
+
     line-height: 1.6;
 }
 
 .listing .btn {
     margin-top: 15px;
-    background: #222;
+
+    background: #2563EB;
+
     color: white;
 }
 
+
 /* =========================
-   EXPLORE
+   FILTERS
 ========================= */
 
 .filters {
     display: flex;
+
     gap: 12px;
 
     margin-bottom: 30px;
@@ -385,7 +457,7 @@ body {
 .filter {
     padding: 11px 15px;
 
-    border: 1px solid #ddd;
+    border: 1px solid #D9E2EC;
 
     background: white;
 
@@ -393,6 +465,13 @@ body {
 
     cursor: pointer;
 }
+
+.filter:hover {
+    border-color: #2563EB;
+
+    color: #2563EB;
+}
+
 
 /* =========================
    ROOMMATES
@@ -410,7 +489,7 @@ body {
 .person {
     background: white;
 
-    border: 1px solid #eee;
+    border: 1px solid #E2E8F0;
 
     border-radius: 15px;
 
@@ -429,7 +508,9 @@ body {
 
     border-radius: 50%;
 
-    background: #ddd;
+    background: #DBEAFE;
+
+    color: #1D4ED8;
 
     display: flex;
 
@@ -437,6 +518,7 @@ body {
     justify-content: center;
 
     font-size: 20px;
+
     font-weight: bold;
 
     flex-shrink: 0;
@@ -446,8 +528,9 @@ body {
     margin-bottom: 6px;
 }
 
+
 /* =========================
-   SPLIT
+   SMART SPLIT
 ========================= */
 
 .split-container {
@@ -461,13 +544,14 @@ body {
 
     border-radius: 16px;
 
-    border: 1px solid #eee;
+    border: 1px solid #E2E8F0;
 }
 
 label {
     display: block;
 
     margin-top: 15px;
+
     margin-bottom: 7px;
 
     font-weight: bold;
@@ -478,11 +562,17 @@ input {
 
     padding: 13px;
 
-    border: 1px solid #ddd;
+    border: 1px solid #D9E2EC;
 
     border-radius: 8px;
 
     font-size: 15px;
+}
+
+input:focus {
+    outline: none;
+
+    border-color: #2563EB;
 }
 
 .calculate {
@@ -492,7 +582,7 @@ input {
 
     padding: 14px;
 
-    background: #222;
+    background: #2563EB;
 
     color: white;
 
@@ -505,6 +595,10 @@ input {
     font-weight: bold;
 }
 
+.calculate:hover {
+    background: #1D4ED8;
+}
+
 #result {
     display: none;
 
@@ -512,12 +606,13 @@ input {
 
     padding: 20px;
 
-    background: #e8f7ed;
+    background: #ECFDF5;
 
     border-radius: 10px;
 
-    color: #155d35;
+    color: #166534;
 }
+
 
 /* =========================
    PROFILE
@@ -530,7 +625,7 @@ input {
 .profile-card {
     background: white;
 
-    border: 1px solid #eee;
+    border: 1px solid #E2E8F0;
 
     border-radius: 16px;
 
@@ -549,7 +644,9 @@ input {
 
     border-radius: 50%;
 
-    background: #ddd;
+    background: #DBEAFE;
+
+    color: #1D4ED8;
 
     display: flex;
 
@@ -557,11 +654,13 @@ input {
     justify-content: center;
 
     font-size: 32px;
+
     font-weight: bold;
 }
 
+
 /* =========================
-   MOBILE
+   MOBILE NAV
 ========================= */
 
 .mobile-nav {
@@ -581,6 +680,7 @@ input {
 
     .main {
         margin-left: 200px;
+
         width: calc(100% - 200px);
     }
 
@@ -607,11 +707,13 @@ input {
 
     .main {
         margin-left: 0;
+
         width: 100%;
     }
 
     .topbar {
         padding: 0 20px;
+
         height: 65px;
     }
 
@@ -648,7 +750,7 @@ input {
 
         background: white;
 
-        border-top: 1px solid #ddd;
+        border-top: 1px solid #E2E8F0;
 
         justify-content: space-around;
 
@@ -670,7 +772,6 @@ input {
     }
 
 }
-
 </style>
 </head>
 
