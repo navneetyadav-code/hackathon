@@ -221,48 +221,46 @@ function showAlert(id, msg, type) {
     el.style.display = 'block';
 }
 
-async function handleAuth(e, action) {
+function handleAuth(e, action) {
     e.preventDefault();
     const btn = document.getElementById(`btn-${action}`);
     const alertId = `${action}-alert`;
     
+    // Check if passwords match during signup
     if(action === 'signup' && document.getElementById('regPwd').value !== document.getElementById('regConfPwd').value) {
         return showAlert(alertId, 'Passwords do not match!', 'error');
     }
 
-    btn.disabled = true; btn.innerHTML = 'Processing...';
+    // UI loading state
+    btn.disabled = true; 
+    btn.innerHTML = 'Processing...';
     document.getElementById(alertId).style.display = 'none';
 
-    const formData = new FormData();
-    formData.append('action', action);
-    
-    if(action === 'login') {
-        formData.append('email', document.getElementById('logEmail').value);
-        formData.append('password', document.getElementById('logPassword').value);
-    } else {
-        formData.append('role', document.querySelector('input[name="role"]:checked').value);
-        formData.append('first_name', document.getElementById('regFirst').value);
-        formData.append('last_name', document.getElementById('regLast').value);
-        formData.append('email', document.getElementById('regEmail').value);
-        formData.append('phone', document.getElementById('regPhone').value);
-        formData.append('password', document.getElementById('regPwd').value);
-    }
+    // Simulated network delay for the prototype
+    setTimeout(() => {
+        if(action === 'login') {
+            const email = document.getElementById('logEmail').value;
+            const password = document.getElementById('logPassword').value;
 
-    try {
-        
-        const res = await fetch('config.php', { method: 'POST', body: formData });
-        const data = await res.json();
-        
-        showAlert(alertId, data.message, data.status);
-        if (data.status === 'success') {
-            if(action === 'login') setTimeout(() => window.location.href = 'dashboard.php', 1500);
-            if(action === 'signup') { e.target.reset(); setTimeout(() => switchTab('login'), 1500); }
+            // Hardcoded prototype authentication check
+            if (email === 'navneetyadav982008@gmail.com' && password === 'Kumar@6202') {
+                showAlert(alertId, 'Login successful! Redirecting to dashboard...', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500); 
+            } else {
+                showAlert(alertId, 'Invalid email or password. Please try again.', 'error');
+            }
+        } else if (action === 'signup') {
+            // Simulated successful signup
+            showAlert(alertId, 'Account created successfully! Please log in.', 'success');
+            e.target.reset(); 
+            setTimeout(() => switchTab('login'), 1500); 
         }
-    } catch (err) {
-        showAlert(alertId, 'Connection error.', 'error');
-    } finally {
-        btn.disabled = false; btn.innerHTML = action === 'login' ? 'Sign In' : 'Create Account';
-    }
+
+        // Restore button state
+        btn.disabled = false; 
+        btn.innerHTML = action === 'login' ? 'Sign In' : 'Create Account';
+        
+    }, 1000); // 1-second simulated delay
 }
 </script>
 </body>
