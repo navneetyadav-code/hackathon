@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Property Matcher</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(15, 32, 39, 0.85), rgba(44, 83, 100, 0.7));
+    z-index: -1;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    width: 480px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+    color: #fff;
+}
+
+.property-img {
+    width: 100%;
+    height: 220px;
+    background: url('https://images.unsplash.com/photo-1502672260266-1c1de2422008?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover;
+    position: relative;
+}
+
+.price-tag {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    backdrop-filter: blur(5px);
+}
+
+.card-body {
+    padding: 30px;
+}
+
+.title-section h1 {
+    margin: 0 0 5px 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.title-section p {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.roommates-section {
+    margin: 25px 0;
+}
+
+.roommates-section h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 15px;
+}
+
+.avatar-group {
+    display: flex;
+    align-items: center;
+}
+
+.avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 3px solid #2c5364;
+    margin-left: -15px;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.3s ease;
+}
+
+.avatar:first-child {
+    margin-left: 0;
+}
+
+.avatar:hover {
+    transform: translateY(-5px);
+    z-index: 10;
+}
+
+.avatar-1 { background-image: url('https://randomuser.me/api/portraits/men/32.jpg'); }
+.avatar-2 { background-image: url('https://randomuser.me/api/portraits/women/44.jpg'); }
+.avatar-3 { background-image: url('https://randomuser.me/api/portraits/men/85.jpg'); }
+
+.avatar-you {
+    display: none;
+    background-image: url('https://randomuser.me/api/portraits/lego/1.jpg');
+    border-color: #00e676;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.input-group {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 5px;
+    display: flex;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-group input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 15px 20px;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+
+.input-group input:focus {
+    outline: none;
+}
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.analyze-btn {
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+    color: #fff;
+    border: none;
+    padding: 0 25px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.analyze-btn:hover {
+    box-shadow: 0 0 20px rgba(0, 180, 219, 0.5);
+    transform: scale(1.02);
+}
+
+.result-dashboard {
+    display: none;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    padding: 20px;
+    margin-top: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.5s ease forwards;
+}
+
+@keyframes slideUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.result-header p {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.result-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.meter-container {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.meter-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 10px;
+    transition: width 1s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.5s;
+}
+
+.status-msg {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 0;
+}
+
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<div class="glass-card">
+    <div class="property-img">
+        <div class="price-tag" id="total-rent" data-value="24000">₹24,000 / month</div>
+    </div>
+    
+    <div class="card-body">
+        <div class="title-section">
+            <h1>Premium 3BHK Apartment</h1>
+            <p>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Downtown, Sector 15
+            </p>
+        </div>
+
+        <div class="roommates-section">
+            <h3>Current Residents (3)</h3>
+            <div class="avatar-group" id="avatar-container">
+                <div class="avatar avatar-1"></div>
+                <div class="avatar avatar-2"></div>
+                <div class="avatar avatar-3"></div>
+                <div class="avatar avatar-you" id="avatar-you"></div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <input type="number" id="user-income" placeholder="Enter your monthly income (₹)">
+            <button class="analyze-btn" onclick="analyzeMatch()">Analyze</button>
+        </div>
+
+        <div class="result-dashboard" id="result-box">
+            <div class="result-header">
+                <div>
+                    <p>Your Fair Share</p>
+                    <h2 id="share-amount">₹0</h2>
+                </div>
+                <div>
+                    <p>Income Used</p>
+                    <h2 id="percentage-used">0%</h2>
+                </div>
+            </div>
+
+            <div class="meter-container">
+                <div class="meter-fill" id="meter-bar"></div>
+            </div>
+
+            <div id="status-text" class="status-msg"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function analyzeMatch() {
+        const income = parseFloat(document.getElementById('user-income').value);
+        if (!income || income <= 0) return;
+
+        const totalRent = parseFloat(document.getElementById('total-rent').getAttribute('data-value'));
+        const currentRoommates = 3; 
+        const totalPeople = currentRoommates + 1; 
+        
+        const perPersonShare = totalRent / totalPeople;
+        const percentageUsed = (perPersonShare / income) * 100;
+
+        document.getElementById('avatar-you').style.display = 'block';
+        document.getElementById('result-box').style.display = 'block';
+        
+        document.getElementById('share-amount').innerText = '₹' + perPersonShare.toFixed(0);
+        document.getElementById('percentage-used').innerText = percentageUsed.toFixed(1) + '%';
+
+        const meterBar = document.getElementById('meter-bar');
+        const statusText = document.getElementById('status-text');
+        
+        let displayWidth = percentageUsed;
+        if(displayWidth > 100) displayWidth = 100;
+        
+        setTimeout(() => {
+            meterBar.style.width = displayWidth + '%';
+            
+            if (percentageUsed <= 25) {
+                meterBar.style.background = '#00e676';
+                statusText.style.background = 'rgba(0, 230, 118, 0.2)';
+                statusText.style.color = '#00e676';
+                statusText.innerText = "Perfect Match! Very affordable for you.";
+            } else if (percentageUsed <= 40) {
+                meterBar.style.background = '#ffd600';
+                statusText.style.background = 'rgba(255, 214, 0, 0.2)';
+                statusText.style.color = '#ffd600';
+                statusText.innerText = "Manageable, but tight on the budget.";
+            } else {
+                meterBar.style.background = '#ff1744';
+                statusText.style.background = 'rgba(255, 23, 68, 0.2)';
+                statusText.style.color = '#ff1744';
+                statusText.innerText = "Danger! This exceeds recommended limits.";
+            }
+        }, 100);
+    }
+</script>
+
+</body>
+</html>
