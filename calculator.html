@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost Splitter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.calculator-wrapper {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    width: 420px;
+    backdrop-filter: blur(12px);
+}
+
+.calculator-wrapper h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #0f2027, #2c5364);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+.input-row {
+    display: flex;
+    gap: 15px;
+}
+
+.input-field {
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.input-field label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c5364;
+    margin-bottom: 8px;
+}
+
+.input-field input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+    color: #1a1a1a;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.input-field input:focus {
+    outline: none;
+    border-color: #2c5364;
+    background-color: #ffffff;
+    box-shadow: 0 5px 15px rgba(44, 83, 100, 0.1);
+}
+
+.action-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #203a43, #2c5364);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+.action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(44, 83, 100, 0.4);
+}
+
+.result-box {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 2px solid #e9ecef;
+    display: none;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.result-box p {
+    margin: 0 0 5px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.result-box h3 {
+    margin: 0;
+    font-size: 32px;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.alert-msg {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    display: none;
+}
+
+.alert-warning {
+    background: #ffe5e5;
+    color: #d32f2f;
+    border: 1px solid #ffcdd2;
+}
+
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+</style>
+</head>
+<body>
+
+<div class="calculator-wrapper">
+    <h2>Rent & Cost Splitter</h2>
+    
+    <div class="input-row">
+        <div class="input-field">
+            <label>Total Rent</label>
+            <input type="number" id="rent" placeholder="e.g. 15000" required>
+        </div>
+        <div class="input-field">
+            <label>Utilities (Bills)</label>
+            <input type="number" id="utilities" placeholder="e.g. 3000" required>
+        </div>
+    </div>
+
+    <div class="input-field">
+        <label>Number of Roommates</label>
+        <input type="number" id="roommates" placeholder="e.g. 3" required min="1">
+    </div>
+
+    <div class="input-row">
+        <div class="input-field">
+            <label>Your Income</label>
+            <input type="number" id="income" placeholder="e.g. 40000" required>
+        </div>
+        <div class="input-field">
+            <label>Max Budget (%)</label>
+            <input type="number" id="percentage" placeholder="e.g. 30" required>
+        </div>
+    </div>
+
+    <button class="action-btn" onclick="calculateFairSplit()">Calculate Split</button>
+
+    <div class="result-box" id="result-container">
+        <p>Fair Per-Person Split</p>
+        <h3 id="final-amount">0</h3>
+        
+        <div id="warning-flag" class="alert-msg alert-warning">
+            Warning: This split exceeds your chosen income percentage!
+        </div>
+        <div id="success-flag" class="alert-msg alert-success">
+            Great! This split is within your affordable budget.
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculateFairSplit() {
+        const rent = parseFloat(document.getElementById('rent').value) || 0;
+        const utilities = parseFloat(document.getElementById('utilities').value) || 0;
+        const roommates = parseInt(document.getElementById('roommates').value) || 1;
+        const income = parseFloat(document.getElementById('income').value) || 0;
+        const percentage = parseFloat(document.getElementById('percentage').value) || 0;
+
+        const totalCost = rent + utilities;
+        const perPersonCost = totalCost / roommates;
+        const maxAllowedCost = (income * percentage) / 100;
+
+        document.getElementById('final-amount').innerText = '₹' + perPersonCost.toFixed(2);
+        document.getElementById('result-container').style.display = 'block';
+
+        const warningFlag = document.getElementById('warning-flag');
+        const successFlag = document.getElementById('success-flag');
+
+        if (income > 0 && percentage > 0) {
+            if (perPersonCost > maxAllowedCost) {
+                warningFlag.style.display = 'block';
+                successFlag.style.display = 'none';
+            } else {
+                warningFlag.style.display = 'none';
+                successFlag.style.display = 'block';
+            }
+        } else {
+            warningFlag.style.display = 'none';
+            successFlag.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
