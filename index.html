@@ -772,6 +772,408 @@ input:focus {
     }
 
 }
+.back-btn {
+    background: none;
+    border: none;
+    color: #2563EB;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 25px;
+}
+
+.room-header {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 35px;
+}
+
+.room-image {
+    width: 45%;
+    min-height: 330px;
+    background: #EAF2FB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 90px;
+}
+
+.room-info {
+    padding: 35px;
+    flex: 1;
+}
+
+.room-label {
+    font-size: 11px;
+    color: #64748B;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.room-info h1 {
+    font-size: 32px;
+    margin: 8px 0;
+}
+
+.room-info > p {
+    color: #64748B;
+    margin-bottom: 20px;
+}
+
+.room-info h2 {
+    font-size: 25px;
+    margin-bottom: 18px;
+}
+
+.room-info h2 span {
+    color: #64748B;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.room-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+}
+
+.room-tags span {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.interest-btn {
+    background: #2563EB;
+    color: white;
+    border: none;
+    padding: 13px 22px;
+    border-radius: 9px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.interest-btn:hover {
+    background: #1D4ED8;
+}
+
+#interest-status {
+    color: #16A34A;
+    font-weight: bold;
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.room-section {
+    margin-top: 30px;
+}
+
+.section-subtitle {
+    color: #64748B;
+    margin: -8px 0 20px;
+}
+
+.seeker-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.seeker-card {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 15px;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    flex-wrap: wrap;
+}
+
+.seeker-avatar {
+    width: 55px;
+    height: 55px;
+    background: #DBEAFE;
+    color: #1D4ED8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.seeker-info {
+    flex: 1;
+    min-width: 150px;
+}
+
+.seeker-info h3 {
+    margin-bottom: 6px;
+}
+
+.seeker-info p {
+    color: #64748B;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+.seeker-info span {
+    color: #64748B;
+    font-size: 12px;
+}
+
+.friend-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #2563EB;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.friend-btn.sent {
+    background: #E2E8F0;
+    color: #475569;
+}
+
+.popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 42, 67, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+}
+
+.popup.show {
+    display: flex;
+}
+
+.popup-box {
+    background: white;
+    width: 420px;
+    max-width: 90%;
+    border-radius: 18px;
+    padding: 30px;
+    text-align: center;
+    position: relative;
+}
+
+.close-popup {
+    position: absolute;
+    right: 18px;
+    top: 15px;
+    border: none;
+    background: none;
+    font-size: 25px;
+    cursor: pointer;
+    color: #64748B;
+}
+
+.popup-avatar {
+    width: 80px;
+    height: 80px;
+    background: #DBEAFE;
+    color: #1D4ED8;
+    border-radius: 50%;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.popup-box > p {
+    color: #64748B;
+}
+
+.profile-details {
+    margin-top: 25px;
+    text-align: left;
+}
+
+.profile-details div {
+    padding: 12px 0;
+    border-bottom: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 13px;
+}
+
+.profile-details strong {
+    display: block;
+    color: #172033;
+    margin-top: 3px;
+}
+
+.popup-chat-btn {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px;
+    background: #2563EB;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.chat-container {
+    max-width: 800px;
+    height: calc(100vh - 160px);
+    min-height: 550px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-chat {
+    border: none;
+    background: none;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.chat-user-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: #DBEAFE;
+    color: #1D4ED8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.chat-header p {
+    color: #64748B;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.room-chat-info {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.room-chat-info span {
+    margin-left: 10px;
+    color: #64748B;
+}
+
+.messages {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message {
+    max-width: 65%;
+    padding: 11px 15px;
+    border-radius: 13px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.message.received {
+    align-self: flex-start;
+    background: #F1F5F9;
+    color: #172033;
+}
+
+.message.sent {
+    align-self: flex-end;
+    background: #2563EB;
+    color: white;
+}
+
+.message-input {
+    border-top: 1px solid #E2E8F0;
+    padding: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.message-input input {
+    flex: 1;
+}
+
+.message-input button {
+    width: 48px;
+    border: none;
+    background: #2563EB;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+@media (max-width: 900px) {
+
+    .seeker-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .room-header {
+        flex-direction: column;
+    }
+
+    .room-image {
+        width: 100%;
+        min-height: 220px;
+    }
+
+}
+
+@media (max-width: 650px) {
+
+    .seeker-list {
+        grid-template-columns: 1fr;
+    }
+
+    .room-info {
+        padding: 22px;
+    }
+
+    .room-info h1 {
+        font-size: 26px;
+    }
+
+    .chat-container {
+        height: calc(100vh - 120px);
+        min-height: 450px;
+    }
+
+}
 </style>
 </head>
 
@@ -1164,8 +1566,13 @@ input:focus {
                     🍛 Food included
                 </div>
 
-                <button class="btn">
-                    View Details
+                <button 
+                
+    class="btn"
+    onclick="openPage('room-details')">
+
+    View Details
+
                 </button>
 
             </div>
@@ -1407,10 +1814,325 @@ input:focus {
         </div>
 
     </div>
+<section id="room-details" class="page">
+
+    <button class="back-btn" onclick="openPage('explore')">
+        ← Back to Explore
+    </button>
+
+    <div class="room-header">
+
+        <div class="room-image">
+            🏠
+        </div>
+
+        <div class="room-info">
+
+            <span class="room-label">
+                PG • SHARED ROOM
+            </span>
+
+            <h1>
+                Green View PG
+            </h1>
+
+            <p>
+                📍 Near College, Your City
+            </p>
+
+            <h2>
+                ₹18,000 <span>/ month</span>
+            </h2>
+
+            <div class="room-tags">
+                <span>🛏️ 2BHK</span>
+                <span>👥 3 People</span>
+                <span>📶 Wi-Fi</span>
+                <span>🍛 Food</span>
+            </div>
+
+            <button class="interest-btn" onclick="showInterest()">
+                I'm Interested
+            </button>
+
+            <p id="interest-status"></p>
+
+        </div>
+
+    </div>
+
+
+    <div class="room-section">
+
+        <h2>
+            👥 Interested Seekers
+        </h2>
+
+        <p class="section-subtitle">
+            Connect with people interested in this same room.
+        </p>
+
+
+        <div class="seeker-list">
+
+
+            <div class="seeker-card">
+
+                <div class="seeker-avatar">
+                    R
+                </div>
+
+                <div class="seeker-info">
+
+                    <h3>
+                        Rahul
+                    </h3>
+
+                    <p>
+                        💰 Budget: ₹5,000–₹7,000
+                    </p>
+
+                    <p>
+                        📅 Moving in September
+                    </p>
+
+                    <span>
+                        🧑‍🎓 Student
+                    </span>
+
+                </div>
+
+                <button
+                    class="friend-btn"
+                    onclick="sendFriendRequest(this, 'Rahul')">
+
+                    Add Friend
+
+                </button>
+
+            </div>
+
+
+
+            <div class="seeker-card">
+
+                <div class="seeker-avatar">
+                    A
+                </div>
+
+                <div class="seeker-info">
+
+                    <h3>
+                        Aditya
+                    </h3>
+
+                    <p>
+                        💰 Budget: ₹5,000–₹6,000
+                    </p>
+
+                    <p>
+                        📅 Moving in September
+                    </p>
+
+                    <span>
+                        🧑‍🎓 Student
+                    </span>
+
+                </div>
+
+                <button
+                    class="friend-btn"
+                    onclick="sendFriendRequest(this, 'Aditya')">
+
+                    Add Friend
+
+                </button>
+
+            </div>
+
+
+
+            <div class="seeker-card">
+
+                <div class="seeker-avatar">
+                    S
+                </div>
+
+                <div class="seeker-info">
+
+                    <h3>
+                        Simran
+                    </h3>
+
+                    <p>
+                        💰 Budget: ₹6,000–₹7,000
+                    </p>
+
+                    <p>
+                        📅 Moving in October
+                    </p>
+
+                    <span>
+                        🧑‍🎓 Student
+                    </span>
+
+                </div>
+
+                <button
+                    class="friend-btn"
+                    onclick="sendFriendRequest(this, 'Simran')">
+
+                    Add Friend
+
+                </button>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
 
 </section>
+<div id="profile-popup" class="popup">
+
+    <div class="popup-box">
+
+        <button
+            class="close-popup"
+            onclick="closeProfile()">
+
+            ×
+
+        </button>
+
+        <div class="popup-avatar">
+            R
+        </div>
+
+        <h2 id="popup-name">
+            Rahul
+        </h2>
+
+        <p>
+            🧑‍🎓 Student
+        </p>
+
+        <div class="profile-details">
+
+            <div>
+                💰 Budget
+                <strong>₹5,000–₹7,000</strong>
+            </div>
+
+            <div>
+                📍 Preferred Area
+                <strong>Near College</strong>
+            </div>
+
+            <div>
+                📅 Move-in
+                <strong>September</strong>
+            </div>
+
+        </div>
+
+        <button
+            class="popup-chat-btn"
+            onclick="openChat('Rahul')">
+
+            💬 Message
+
+        </button>
+
+    </div>
+
+</div>
+
+<section id="chat" class="page">
+
+    <div class="chat-container">
+
+        <div class="chat-header">
+
+            <button
+                class="back-chat"
+                onclick="openPage('room-details')">
+
+                ←
+
+            </button>
+
+            <div class="chat-user-avatar">
+                R
+            </div>
+
+            <div>
+
+                <h3 id="chat-name">
+                    Rahul
+                </h3>
+
+                <p>
+                    Green View PG
+                </p>
+
+            </div>
+
+        </div>
 
 
+        <div class="room-chat-info">
+
+            🏠 Green View PG
+
+            <span>
+                ₹18,000 / month
+            </span>
+
+        </div>
+
+
+        <div
+            class="messages"
+            id="messages">
+
+            <div class="message received">
+
+                Hey! Are you still interested
+                in this room?
+
+            </div>
+
+            <div class="message sent">
+
+                Yeah, I'm looking for
+                roommates.
+
+            </div>
+
+        </div>
+
+
+        <div class="message-input">
+
+            <input
+                id="messageInput"
+                type="text"
+                placeholder="Type a message..."
+                onkeydown="handleEnter(event)"
+            >
+
+            <button onclick="sendMessage()">
+                ➤
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
 </main>
 
 </div>
@@ -1598,6 +2320,93 @@ function calculateRent() {
 
 }
 
+function showInterest() {
+
+    const status = document.getElementById("interest-status");
+
+    status.innerText = "✓ You're interested in this room";
+
+}
+
+
+function sendFriendRequest(button, name) {
+
+    button.innerText = "Request Sent ✓";
+
+    button.classList.add("sent");
+
+    button.disabled = true;
+
+}
+
+
+function openProfile(name) {
+
+    document.getElementById("popup-name").innerText = name;
+
+    document.getElementById("profile-popup").classList.add("show");
+
+}
+
+
+function closeProfile() {
+
+    document.getElementById("profile-popup").classList.remove("show");
+
+}
+
+
+function openChat(name) {
+
+    closeProfile();
+
+    document.getElementById("chat-name").innerText = name;
+
+    openPage("chat");
+
+}
+
+
+function sendMessage() {
+
+    const input =
+        document.getElementById("messageInput");
+
+    const message =
+        input.value.trim();
+
+    if (message === "") {
+        return;
+    }
+
+    const messages =
+        document.getElementById("messages");
+
+    const newMessage =
+        document.createElement("div");
+
+    newMessage.className = "message sent";
+
+    newMessage.innerText = message;
+
+    messages.appendChild(newMessage);
+
+    input.value = "";
+
+    messages.scrollTop = messages.scrollHeight;
+
+}
+
+
+function handleEnter(event) {
+
+    if (event.key === "Enter") {
+
+        sendMessage();
+
+    }
+
+}
 </script>
 
 </body>
