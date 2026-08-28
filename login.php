@@ -786,9 +786,8 @@ async function handleLogin(e) {
         
         if (data.status === 'success') {
             showAlert(alertId, data.message, 'success');
-            // Redirect to a secure dashboard after success
             setTimeout(() => {
-                window.location.href = 'dashboard.php'; // Update redirect as needed
+                window.location.href = 'dashboard.php';
             }, 1500);
         } else {
             showAlert(alertId, data.message, 'error');
