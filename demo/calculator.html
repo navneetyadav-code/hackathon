@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoomMate Pro — Hostel & PG Expense Manager</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e7ebf2;
+  --primary:#2563eb;--primary2:#7c3aed;--green:#16a34a;--red:#dc2626;--amber:#d97706;
+  --shadow:0 18px 50px rgba(30,41,59,.10);--radius:20px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:#111827;color:white;padding:24px 16px;position:fixed;inset:0 auto 0 0;z-index:10}
+.logo{font-size:22px;font-weight:800;padding:8px 12px 28px}
+.logo span{color:#60a5fa}
+.nav button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:#cbd5e1;padding:13px 14px;border-radius:12px;margin:4px 0;text-align:left}
+.nav button.active,.nav button:hover{background:#1f2937;color:white}
+.sidebar-footer{position:absolute;bottom:20px;left:20px;right:20px;color:#94a3b8;font-size:12px}
+.main{margin-left:250px;width:calc(100% - 250px);padding:28px;max-width:1500px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.topbar h1{margin:0;font-size:28px}
+.topbar p{margin:5px 0 0;color:var(--muted)}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;font-weight:800}
+.page{display:none}.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.stat{display:flex;justify-content:space-between;align-items:flex-start}
+.stat .icon{font-size:24px;background:#eff6ff;padding:10px;border-radius:12px}
+.stat small{color:var(--muted);font-weight:600}
+.stat h2{margin:10px 0 3px;font-size:26px}
+.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
+.grid2{display:grid;grid-template-columns:1.35fr .9fr;gap:18px;margin-top:18px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-title h3{margin:0;font-size:18px}
+.btn{border:0;border-radius:12px;padding:11px 15px;font-weight:700}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary2));color:white}
+.btn-light{background:#f1f5f9;color:#334155}
+.btn-danger{background:#fee2e2;color:#b91c1c}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:#475569}
+.field input,.field select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;background:#f8fafc;outline:none}
+.field input:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px #dbeafe}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:13px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+.table th{color:var(--muted);font-size:12px;text-transform:uppercase}
+.badge{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.badge-green{background:#dcfce7;color:#15803d}.badge-red{background:#fee2e2;color:#b91c1c}.badge-blue{background:#dbeafe;color:#1d4ed8}
+.empty{text-align:center;color:var(--muted);padding:28px}
+.bar{height:10px;background:#eef2f7;border-radius:20px;overflow:hidden;margin:8px 0 16px}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary2));border-radius:20px}
+.expense-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin:12px 0}.expense-name{font-weight:600}.expense-amt{font-weight:700}
+.progress-wrap{margin-top:12px}.progress-label{display:flex;justify-content:space-between;font-size:13px}
+.chart{height:210px;display:flex;align-items:end;gap:14px;padding:15px 10px 0}.barcol{flex:1;text-align:center;color:var(--muted);font-size:11px}.barcol i{display:block;background:linear-gradient(180deg,#60a5fa,#7c3aed);border-radius:8px 8px 2px 2px;min-height:5px;margin-bottom:7px}
+.split-result{background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe}
+.big{font-size:34px;font-weight:800;margin:5px 0 8px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;place-items:center;z-index:30;padding:20px}.modal.show{display:grid}
+.modal-box{background:white;border-radius:20px;padding:24px;width:min(520px,100%);box-shadow:0 30px 80px rgba(0,0,0,.25)}
+.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0}.close{border:0;background:#f1f5f9;border-radius:10px;padding:7px 11px}
+.toast{position:fixed;right:25px;bottom:25px;background:#111827;color:white;padding:13px 18px;border-radius:12px;display:none;z-index:50}
+.mobile-menu{display:none}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media(max-width:720px){
+ .sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:translateX(0)}
+ .main{margin-left:0;width:100%;padding:18px}.mobile-menu{display:block;border:0;background:#111827;color:#fff;border-radius:10px;padding:9px 12px}
+ .topbar{gap:12px}.topbar h1{font-size:22px}.cards{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="logo">RoomMate<span>Pro</span></div>
+  <nav class="nav">
+    <button class="active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
+    <button onclick="showPage('splitter',this)">⚖️ Smart Splitter</button>
+    <button onclick="showPage('expenses',this)">🧾 Expenses</button>
+    <button onclick="showPage('roommates',this)">👥 Roommates</button>
+    <button onclick="showPage('settlements',this)">💸 Settlements</button>
+    <button onclick="showPage('budget',this)">🎯 Budget Planner</button>
+  </nav>
+  <div class="sidebar-footer">100% browser-based • Data saved locally</div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div style="display:flex;gap:12px;align-items:center">
+    <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Your household finances at a glance.</p></div>
+  </div>
+  <div class="avatar">RM</div>
+</header>
+
+<section id="dashboard" class="page active">
+  <div class="cards">
+    <div class="card stat"><div><small>Total Monthly Cost</small><h2 id="dashTotal">₹0</h2><span class="green">● Live calculation</span></div><div class="icon">💰</div></div>
+    <div class="card stat"><div><small>Per Person</small><h2 id="dashPer">₹0</h2><span>Current split</span></div><div class="icon">👤</div></div>
+    <div class="card stat"><div><small>Roommates</small><h2 id="dashPeople">0</h2><span>Active members</span></div><div class="icon">👥</div></div>
+    <div class="card stat"><div><small>Budget Used</small><h2 id="dashBudget">0%</h2><span id="budgetStatus">Add your budget</span></div><div class="icon">🎯</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="section-title"><h3>Monthly Spending</h3><button class="btn btn-light" onclick="showPage('expenses')">+ Add Expense</button></div><div class="chart" id="chart"></div></div>
+    <div class="card"><div class="section-title"><h3>Expense Breakdown</h3></div><div id="breakdown"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="section-title"><h3>Recent Expenses</h3><button class="btn btn-light" onclick="showPage('expenses')">View all</button></div><div id="recent"></div></div>
+    <div class="card split-result"><h3 style="margin-top:0">💡 Smart Insight</h3><p id="insight">Add some expenses and roommates to get personalized insights.</p></div>
+  </div>
+</section>
+
+<section id="splitter" class="page">
+  <div class="grid2">
+    <div class="card">
+      <div class="section-title"><h3>Smart Cost Splitter</h3></div>
+      <div class="form-grid">
+        <div class="field"><label>Total Rent (₹)</label><input id="rent" type="number" placeholder="15000"></div>
+        <div class="field"><label>Utilities (₹)</label><input id="utilities" type="number" placeholder="3000"></div>
+        <div class="field"><label>Number of People</label><input id="splitPeople" type="number" min="1" value="3"></div>
+        <div class="field"><label>Split Method</label><select id="splitMethod"><option value="equal">Equal Split</option><option value="income">Income Based</option><option value="custom">Custom Percentages</option></select></div>
+      </div>
+      <div id="advancedSplit" style="margin-top:15px"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="calculateSplit()">Calculate Fair Split</button>
+    </div>
+    <div class="card split-result" id="splitResult"><h3>Result</h3><div class="big">₹0</div><p>Enter your costs and calculate.</p></div>
+  </div>
+</section>
+
+<section id="expenses" class="page">
+  <div class="grid2">
+    <div class="card">
+      <div class="section-title"><h3>Add Expense</h3></div>
+      <div class="form-grid">
+        <div class="field"><label>Description</label><input id="expDesc" placeholder="Electricity bill"></div>
+        <div class="field"><label>Amount (₹)</label><input id="expAmount" type="number" placeholder="3000"></div>
+        <div class="field"><label>Category</label><select id="expCategory"><option>Rent</option><option>Electricity</option><option>Water</option><option>Wi-Fi</option><option>Food</option><option>Groceries</option><option>Maintenance</option><option>Other</option></select></div>
+        <div class="field"><label>Paid By</label><select id="expPayer"></select></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="addExpense()">Add Expense</button>
+    </div>
+    <div class="card"><h3 style="margin-top:0">This Month</h3><div class="big" id="expenseTotal">₹0</div><p style="color:var(--muted)">All recorded household expenses</p><div id="categoryBars"></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="section-title"><h3>All Expenses</h3><button class="btn btn-danger" onclick="clearExpenses()">Clear All</button></div><div id="expenseTable"></div></div>
+</section>
+
+<section id="roommates" class="page">
+  <div class="card">
+    <div class="section-title"><h3>Roommates</h3><button class="btn btn-primary" onclick="openModal()">+ Add Roommate</button></div>
+    <div id="roommateList"></div>
+  </div>
+</section>
+
+<section id="settlements" class="page">
+  <div class="card">
+    <div class="section-title"><h3>Who Owes Whom?</h3><button class="btn btn-light" onclick="calculateSettlements()">↻ Recalculate</button></div>
+    <p style="color:var(--muted)">Expenses are split equally between active roommates. The app calculates the minimum payments needed to settle up.</p>
+    <div id="settlementList"></div>
+  </div>
+</section>
+
+<section id="budget" class="page">
+  <div class="grid2">
+    <div class="card">
+      <div class="section-title"><h3>Budget Planner</h3></div>
+      <div class="form-grid">
+        <div class="field"><label>Monthly Income (₹)</label><input id="income" type="number" placeholder="40000" oninput="updateDashboard()"></div>
+        <div class="field"><label>Maximum Housing %</label><input id="budgetPct" type="number" value="30" oninput="updateDashboard()"></div>
+        <div class="field"><label>Savings Goal (₹)</label><input id="savingGoal" type="number" placeholder="10000"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="saveBudget()">Save Budget</button>
+    </div>
+    <div class="card split-result"><h3>Budget Health</h3><div class="big" id="healthScore">—</div><p id="healthText">Enter income to see your score.</p><div class="progress-wrap"><div class="progress-label"><span>Housing affordability</span><span id="housingPct">0%</span></div><div class="bar"><span id="housingBar" style="width:0%"></span></div></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><h3>Recommended Targets</h3><div id="targets"></div></div>
+</section>
+</main>
+</div>
+
+<div class="modal" id="modal"><div class="modal-box">
+  <div class="modal-head"><h3>Add Roommate</h3><button class="close" onclick="closeModal()">✕</button></div>
+  <div class="field" style="margin-top:18px"><label>Name</label><input id="newName" placeholder="e.g. Rahul"></div>
+  <div class="field" style="margin-top:12px"><label>Monthly Income (optional)</label><input id="newIncome" type="number" placeholder="40000"></div>
+  <button class="btn btn-primary" style="width:100%;margin-top:18px" onclick="addRoommate()">Add Roommate</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='roommate-pro-v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ roommates:[{id:1,name:'You',income:40000},{id:2,name:'Roommate 1',income:30000},{id:3,name:'Roommate 2',income:25000}],
+ expenses:[{id:1,desc:'Monthly Rent',amount:15000,category:'Rent',payer:'You'},{id:2,desc:'Electricity & Bills',amount:3000,category:'Electricity',payer:'You'},{id:3,desc:'Groceries',amount:4500,category:'Groceries',payer:'Roommate 1'}],
+ budget:{income:40000,pct:30,saving:10000}
+};
+function save(){localStorage.setItem(KEY,JSON.stringify(data));updateAll()}
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
+function showToast(t){const x=document.getElementById('toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2200)}
+const titles={dashboard:['Dashboard','Your household finances at a glance.'],splitter:['Smart Splitter','Choose how you want to divide rent and bills.'],expenses:['Expenses','Track every household payment in one place.'],roommates:['Roommates','Manage everyone sharing the household.'],settlements:['Settlements','See exactly who needs to pay whom.'],budget:['Budget Planner','Keep housing costs and savings on track.']};
+function showPage(id,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSub').textContent=titles[id][1];document.getElementById('sidebar').classList.remove('open');updateAll()}
+function updateAll(){updateDashboard();renderRoommates();renderExpenses();renderPayers();calculateSettlements();renderTargets()}
+function updateDashboard(){
+ const total=data.expenses.reduce((s,e)=>s+Number(e.amount),0), people=Math.max(data.roommates.length,1), per=total/people;
+ document.getElementById('dashTotal').textContent=money(total);document.getElementById('dashPer').textContent=money(per);document.getElementById('dashPeople').textContent=data.roommates.length;
+ const inc=Number(document.getElementById('income')?.value||data.budget.income||0), pct=Number(document.getElementById('budgetPct')?.value||data.budget.pct||30);
+ const housing=data.expenses.filter(e=>e.category==='Rent').reduce((s,e)=>s+Number(e.amount),0);
+ const used=inc?Math.round(housing/inc*100):0;document.getElementById('dashBudget').textContent=used+'%';document.getElementById('budgetStatus').textContent=inc?(used<=pct?'Within target':'Over target'):'Add your budget';
+ const cats={};data.expenses.forEach(e=>cats[e.category]=(cats[e.category]||0)+Number(e.amount));
+ const max=Math.max(...Object.values(cats),1);
+ document.getElementById('breakdown').innerHTML=Object.keys(cats).length?Object.entries(cats).map(([k,v])=>`<div class="expense-row"><span class="expense-name">${k}</span><span class="expense-amt">${money(v)}</span><div style="grid-column:1/-1"><div class="bar"><span style="width:${v/max*100}%"></span></div></div></div>`).join(''):'<div class="empty">No expenses yet.</div>';
+ const recent=[...data.expenses].reverse().slice(0,5);document.getElementById('recent').innerHTML=recent.length?recent.map(e=>`<div class="expense-row"><span><b>${e.desc}</b><br><small style="color:var(--muted)">${e.category} • ${e.payer}</small></span><span class="expense-amt">${money(e.amount)}</span></div>`).join(''):'<div class="empty">No expenses yet.</div>';
+ document.getElementById('chart').innerHTML=[['Rent',housing],['Bills',data.expenses.filter(e=>['Electricity','Water','Wi-Fi'].includes(e.category)).reduce((s,e)=>s+Number(e.amount),0)],['Food',data.expenses.filter(e=>['Food','Groceries'].includes(e.category)).reduce((s,e)=>s+Number(e.amount),0)],['Other',data.expenses.filter(e=>!['Rent','Electricity','Water','Wi-Fi','Food','Groceries'].includes(e.category)).reduce((s,e)=>s+Number(e.amount),0)]].map(([n,v])=>`<div class="barcol"><i style="height:${Math.max(8,(v/(total||1))*150)}px"></i>${n}<br>${money(v)}</div>`).join('');
+ const insight=inc?(used>pct?`Housing is ${used}% of income, above your ${pct}% target. Consider a cheaper room or sharing utilities.`:`Nice! Housing is ${used}% of income and within your ${pct}% target.`):`You have ${data.roommates.length} roommates. Add your income in Budget Planner for affordability insights.`;
+ document.getElementById('insight').textContent=insight;
+ if(document.getElementById('expenseTotal'))document.getElementById('expenseTotal').textContent=money(total);
+ if(document.getElementById('healthScore')){const score=inc?Math.max(0,Math.min(100,Math.round(100-Math.max(0,used-pct)*2))):null;document.getElementById('healthScore').textContent=score===null?'—':score+'/100';document.getElementById('healthText').textContent=score===null?'Enter income to see your score.':score>=80?'Excellent budget health.':score>=60?'Manageable, but keep an eye on housing.':'Your housing cost needs attention.';document.getElementById('housingPct').textContent=used+'%';document.getElementById('housingBar').style.width=Math.min(100,used)+'%'}
+}
+function renderRoommates(){const el=document.getElementById('roommateList');el.innerHTML=data.roommates.length?`<table class="table"><thead><tr><th>Name</th><th>Income</th><th>Share of People</th><th></th></tr></thead><tbody>${data.roommates.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.income?money(r.income):'—'}</td><td>${Math.round(100/data.roommates.length)}%</td><td><button class="btn btn-danger" onclick="removeRoommate(${r.id})">Remove</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">No roommates added.</div>'}
+function renderPayers(){const s=document.getElementById('expPayer');if(!s)return;s.innerHTML=data.roommates.map(r=>`<option>${r.name}</option>`).join('')}
+function renderExpenses(){const el=document.getElementById('expenseTable');const bars=document.getElementById('categoryBars');if(!el)return;el.innerHTML=data.expenses.length?`<table class="table"><thead><tr><th>Expense</th><th>Category</th><th>Paid By</th><th>Amount</th><th></th></tr></thead><tbody>${data.expenses.map(e=>`<tr><td><b>${e.desc}</b></td><td><span class="badge badge-blue">${e.category}</span></td><td>${e.payer}</td><td><b>${money(e.amount)}</b></td><td><button class="btn btn-danger" onclick="deleteExpense(${e.id})">Delete</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">No expenses recorded.</div>';const cats={};data.expenses.forEach(e=>cats[e.category]=(cats[e.category]||0)+Number(e.amount));const max=Math.max(...Object.values(cats),1);bars.innerHTML=Object.entries(cats).map(([k,v])=>`<div class="progress-label"><span>${k}</span><b>${money(v)}</b></div><div class="bar"><span style="width:${v/max*100}%"></span></div>`).join('')||'<div class="empty">No data yet.</div>'}
+function addExpense(){const d=document.getElementById('expDesc').value.trim(),a=Number(document.getElementById('expAmount').value),c=document.getElementById('expCategory').value,p=document.getElementById('expPayer').value;if(!d||a<=0){showToast('Enter a valid description and amount');return}data.expenses.push({id:Date.now(),desc:d,amount:a,category:c,payer:p});document.getElementById('expDesc').value='';document.getElementById('expAmount').value='';save();showToast('Expense added')}
+function deleteExpense(id){data.expenses=data.expenses.filter(e=>e.id!==id);save();showToast('Expense deleted')}
+function clearExpenses(){if(confirm('Delete all expenses?')){data.expenses=[];save();showToast('Expenses cleared')}}
+function openModal(){document.getElementById('modal').classList.add('show');document.getElementById('newName').focus()}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function addRoommate(){const n=document.getElementById('newName').value.trim(),i=Number(document.getElementById('newIncome').value)||0;if(!n){showToast('Enter a name');return}data.roommates.push({id:Date.now(),name:n,income:i});document.getElementById('newName').value='';document.getElementById('newIncome').value='';closeModal();save();showToast(n+' added')}
+function removeRoommate(id){if(data.roommates.length<=1){showToast('Keep at least one roommate');return}const r=data.roommates.find(x=>x.id===id);if(confirm('Remove '+r.name+'?')){data.roommates=data.roommates.filter(x=>x.id!==id);save();}}
+function calculateSplit(){const rent=Number(document.getElementById('rent').value)||0,u=Number(document.getElementById('utilities').value)||0,n=Math.max(1,Number(document.getElementById('splitPeople').value)||1),m=document.getElementById('splitMethod').value,total=rent+u;let msg='';if(m==='equal')msg=`<div class="big">${money(total/n)}</div><p>Each person pays an equal share of ${money(total)}.</p>`;if(m==='income'){const incomes=data.roommates.slice(0,n).map(x=>Number(x.income)||0);const sum=incomes.reduce((a,b)=>a+b,0);if(sum)msg=incomes.map((x,i)=>`<div class="expense-row"><span>${data.roommates[i]?.name||'Person '+(i+1)}</span><b>${money(total*x/sum)}</b></div>`).join('');else msg='<p>Add roommate incomes first.</p>'}if(m==='custom'){msg='<div class="form-grid">'+Array.from({length:n},(_,i)=>`<div class="field"><label>Person ${i+1} %</label><input class="customPct" type="number" value="${(100/n).toFixed(2)}"></div>`).join('')+'</div><button class="btn btn-primary" style="margin-top:12px" onclick="applyCustomSplit('+total+')">Calculate Custom Split</button>'}document.getElementById('splitResult').innerHTML='<h3>Result</h3>'+msg}
+function applyCustomSplit(total){const vals=[...document.querySelectorAll('.customPct')].map(x=>Number(x.value)||0),sum=vals.reduce((a,b)=>a+b,0);if(Math.abs(sum-100)>0.01){showToast('Percentages must total 100%');return}document.getElementById('splitResult').innerHTML='<h3>Custom Result</h3>'+vals.map((v,i)=>`<div class="expense-row"><span>Person ${i+1} (${v}%)</span><b>${money(total*v/100)}</b></div>`).join('')}
+function calculateSettlements(){const el=document.getElementById('settlementList');if(!el)return;const people=data.roommates;if(!people.length||!data.expenses.length){el.innerHTML='<div class="empty">Add roommates and expenses first.</div>';return}const total=data.expenses.reduce((s,e)=>s+Number(e.amount),0),share=total/people.length,balances=people.map(p=>({name:p.name,bal:data.expenses.filter(e=>e.payer===p.name).reduce((s,e)=>s+Number(e.amount),0)-share}));let debt=balances.filter(x=>x.bal<-0.01).map(x=>({...x})),credit=balances.filter(x=>x.bal>0.01).map(x=>({...x})),out=[];debt.forEach(d=>credit.forEach(c=>{if(d.bal>=0||c.bal<=0)return;const amt=Math.min(-d.bal,c.bal);if(amt>0){out.push(`<div class="expense-row"><span>🔴 <b>${d.name}</b> pays <b>${c.name}</b></span><b>${money(amt)}</b></div>`);d.bal+=amt;c.bal-=amt}}));el.innerHTML=out.length?out.join(''):`<div class="empty">🎉 Everyone is settled up.</div>`}
+function saveBudget(){data.budget.income=Number(document.getElementById('income').value)||0;data.budget.pct=Number(document.getElementById('budgetPct').value)||30;data.budget.saving=Number(document.getElementById('savingGoal').value)||0;save();showToast('Budget saved')}
+function renderTargets(){const income=Number(data.budget.income)||0,saveGoal=Number(data.budget.saving)||0;document.getElementById('income').value=income||'';document.getElementById('budgetPct').value=data.budget.pct||30;document.getElementById('savingGoal').value=saveGoal||'';document.getElementById('targets').innerHTML=income?`<div class="expense-row"><span>🏠 Housing target</span><b>${money(income*(data.budget.pct||30)/100)}</b></div><div class="expense-row"><span>💰 Savings goal</span><b>${money(saveGoal)}</b></div><div class="expense-row"><span>🧮 Remaining after target housing + savings</span><b>${money(income-income*(data.budget.pct||30)/100-saveGoal)}</b></div>`:'<div class="empty">Save your income and goals to see targets.</div>'}
+document.getElementById('splitMethod').addEventListener('change',calculateSplit);
+updateAll();
+</script>
+</body>
+</html>
