@@ -271,7 +271,7 @@
             color: var(--brand-primary);
         }
 
-        /* Radio Buttons specifically for preferences */
+        /* Host/seeker role toggle */
         .pref-group {
             margin-bottom: 24px;
         }
@@ -286,7 +286,10 @@
 
         .pref-options {
             display: flex;
-            gap: 12px;
+            gap: 10px;
+            padding: 5px;
+            background: var(--bg-color);
+            border-radius: 12px;
         }
 
         .pref-option {
@@ -294,15 +297,17 @@
         }
 
         .pref-option input[type="radio"] {
-            display: none;
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .pref-option label {
             display: block;
             text-align: center;
-            padding: 12px 10px;
-            border: 1.5px solid var(--border-color);
-            border-radius: 10px;
+            padding: 13px 10px;
+            border: 1.5px solid transparent;
+            border-radius: 9px;
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--text-muted);
@@ -312,8 +317,14 @@
 
         .pref-option input[type="radio"]:checked + label {
             border-color: var(--brand-primary);
-            background-color: rgba(79, 70, 229, 0.05);
+            background-color: var(--surface-color);
             color: var(--brand-primary);
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+        }
+
+        .pref-option input[type="radio"]:focus-visible + label {
+            outline: 3px solid rgba(79, 70, 229, 0.2);
+            outline-offset: 2px;
         }
 
         /* Password Toggle */
@@ -531,19 +542,15 @@
                     <form id="signupForm" onsubmit="handleSignup(event)">
                         
                         <div class="pref-group">
-                            <span class="pref-label-main">What are you looking for?</span>
+                            <span class="pref-label-main">I am a</span>
                             <div class="pref-options">
                                 <div class="pref-option">
-                                    <input type="radio" id="pref-roommate" name="preference" value="roommate" checked>
-                                    <label for="pref-roommate">Need a Roommate</label>
+                                    <input type="radio" id="role-seeker" name="role" value="seeker" checked required>
+                                    <label for="role-seeker">I am a Seeker</label>
                                 </div>
                                 <div class="pref-option">
-                                    <input type="radio" id="pref-room" name="preference" value="room">
-                                    <label for="pref-room">Find a Room/PG</label>
-                                </div>
-                                <div class="pref-option">
-                                    <input type="radio" id="pref-flat" name="preference" value="flat">
-                                    <label for="pref-flat">Rent Entire Flat</label>
+                                    <input type="radio" id="role-host" name="role" value="host" required>
+                                    <label for="role-host">I am a Host (Owner)</label>
                                 </div>
                             </div>
                         </div>
