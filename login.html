@@ -1,304 +1,784 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Portal</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RentMate - Rent Affordability & Roommate Finder</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    height: 100vh;
-    overflow: hidden;
-}
+        :root {
+            /* Theme Colors tailored for Real Estate / Coliving */
+            --brand-primary: #4F46E5; /* Indigo */
+            --brand-primary-hover: #4338CA;
+            --brand-secondary: #F97316; /* Warm Orange Accent */
+            --bg-color: #F8FAFC; /* Slate 50 */
+            --surface-color: #FFFFFF;
+            --text-main: #0F172A; /* Slate 900 */
+            --text-muted: #64748B; /* Slate 500 */
+            --border-color: #E2E8F0; /* Slate 200 */
+            --error-color: #EF4444; /* Red 500 */
+            --success-color: #10B981; /* Emerald 500 */
+            --font-family: 'Plus Jakarta Sans', sans-serif;
+        }
 
-.layout-container {
-    display: flex;
-    height: 100%;
-    width: 100%;
-}
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-.brand-section {
-    flex: 1.2;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 8%;
-    color: #ffffff;
-}
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+            /* Allow scrolling at body level for better mobile UX */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-.brand-section h1 {
-    font-size: 48px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    line-height: 1.2;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
+        .app-wrapper {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            /* Support for mobile viewport heights */
+            min-height: 100svh; 
+            flex-direction: row;
+        }
 
-.brand-section p {
-    font-size: 18px;
-    font-weight: 300;
-    line-height: 1.6;
-    color: #e9ecef;
-    max-width: 85%;
-}
+        /* --- LEFT SIDE: HERO / SLIDESHOW --- */
+        .hero-section {
+            width: 42%;
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-start;
+            padding: clamp(32px, 5vw, 64px);
+            color: #FFF;
+        }
 
-.login-section {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px);
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            /* Gradient overlay to make text readable */
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%);
+            z-index: 2;
+        }
 
-.login-wrapper {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 45px 40px;
-    border-radius: 24px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    width: 360px;
-}
+        .slideshow {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
 
-.login-wrapper h2 {
-    text-align: center;
-    margin-top: 0;
-    margin-bottom: 35px;
-    font-weight: 700;
-    font-size: 30px;
-    letter-spacing: 1.5px;
-    background: linear-gradient(135deg, #0f2027, #2c5364);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        .slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            animation: crossfade 18s infinite ease-in-out;
+        }
 
-.toggle-container {
-    display: flex;
-    position: relative;
-    background: #e9ecef;
-    border-radius: 40px;
-    margin-bottom: 40px;
-    padding: 6px;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-}
+        .slide:nth-child(1) { animation-delay: 0s; }
+        .slide:nth-child(2) { animation-delay: 6s; }
+        .slide:nth-child(3) { animation-delay: 12s; }
 
-.toggle-btn {
-    flex: 1;
-    padding: 14px 0;
-    border: none;
-    background: transparent;
-    color: #6c757d;
-    font-size: 16px;
-    font-weight: 600;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    z-index: 1;
-    letter-spacing: 0.5px;
-}
+        @keyframes crossfade {
+            0%, 20% { opacity: 1; transform: scale(1.05); }
+            33.33%, 86.66% { opacity: 0; transform: scale(1.08); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
-.toggle-btn.active {
-    color: #ffffff;
-}
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            max-width: 100%;
+        }
 
-.slider {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    width: calc(50% - 6px);
-    height: calc(100% - 12px);
-    background: linear-gradient(135deg, #203a43, #2c5364);
-    border-radius: 30px;
-    transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    z-index: 0;
-    box-shadow: 0 4px 10px rgba(44, 83, 100, 0.3);
-}
+        .hero-content h2 {
+            font-size: clamp(2rem, 3vw, 3rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
 
-.input-field {
-    position: relative;
-    margin-bottom: 25px;
-}
+        .hero-content h2 span {
+            color: var(--brand-secondary);
+        }
 
-.input-field input {
-    width: 100%;
-    padding: 16px 16px 16px 52px;
-    border: 2px solid #e9ecef;
-    border-radius: 14px;
-    box-sizing: border-box;
-    font-size: 15px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    font-family: 'Poppins', sans-serif;
-    color: #1a1a1a;
-    background-color: #f8f9fa;
-    letter-spacing: 0.5px;
-}
+        .hero-content p {
+            font-size: clamp(1rem, 1.2vw, 1.1rem);
+            line-height: 1.6;
+            opacity: 0.9;
+            max-width: 420px;
+        }
 
-.input-field input::placeholder {
-    color: #adb5bd;
-    font-weight: 400;
-}
+        /* --- RIGHT SIDE: AUTHENTICATION FORMS --- */
+        .form-section {
+            width: 58%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: clamp(24px, 5vw, 48px);
+            overflow-y: auto;
+            background: var(--bg-color);
+        }
 
-.input-field input:focus {
-    outline: none;
-    border-color: #2c5364;
-    background-color: #ffffff;
-    box-shadow: 0 5px 20px rgba(44, 83, 100, 0.15);
-}
+        .form-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--surface-color);
+            padding: clamp(24px, 4vw, 48px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
 
-.input-field svg {
-    position: absolute;
-    left: 18px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 22px;
-    height: 22px;
-    fill: #adb5bd;
-    transition: fill 0.3s;
-    pointer-events: none;
-}
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            margin-bottom: 32px;
+            letter-spacing: -0.01em;
+        }
+        
+        .brand-logo svg {
+            width: 32px;
+            height: 32px;
+            fill: var(--brand-primary);
+        }
 
-.input-field input:focus + svg, 
-.input-field input:not(:placeholder-shown) + svg {
-    fill: #2c5364;
-}
+        .auth-tabs {
+            display: flex;
+            background: var(--bg-color);
+            padding: 6px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            position: relative;
+        }
 
-.action-btn {
-    width: 100%;
-    padding: 18px;
-    background: linear-gradient(135deg, #203a43, #2c5364);
-    color: #fff;
-    border: none;
-    border-radius: 14px;
-    font-size: 17px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    font-family: 'Poppins', sans-serif;
-    letter-spacing: 1px;
-    margin-top: 15px;
-}
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
 
-.action-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(44, 83, 100, 0.4);
-}
+        .auth-tab.active {
+            color: var(--brand-primary);
+            background: var(--surface-color);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        }
 
-.signup-link {
-    text-align: center;
-    margin-top: 30px;
-    font-size: 14.5px;
-    color: #6c757d;
-    font-weight: 500;
-}
+        .auth-view {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+        
+        .auth-view.active {
+            display: block;
+        }
 
-.signup-link a {
-    color: #2c5364;
-    text-decoration: none;
-    font-weight: 700;
-    transition: color 0.3s ease;
-    margin-left: 5px;
-}
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-.signup-link a:hover {
-    color: #0f2027;
-    text-decoration: underline;
-}
+        .form-header {
+            margin-bottom: 24px;
+        }
 
-@media (max-width: 900px) {
-    .layout-container {
-        flex-direction: column;
-        overflow-y: auto;
-    }
-    .brand-section {
-        flex: none;
-        align-items: center;
-        text-align: center;
-        padding: 40px 20px;
-    }
-    .brand-section h1 {
-        font-size: 32px;
-    }
-    .brand-section p {
-        font-size: 16px;
-    }
-    .login-section {
-        flex: none;
-        border-left: none;
-        padding: 20px;
-        background: transparent;
-    }
-}
-</style>
+        .form-header h3 {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .form-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .input-row .input-group {
+            flex: 1;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 24px 16px 8px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 14px;
+            background-color: var(--surface-color);
+            font-size: 1rem;
+            font-family: inherit;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            background-color: #FFFFFF;
+        }
+
+        .input-label {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            color: var(--text-muted);
+            pointer-events: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Floating effect */
+        .input-field:focus ~ .input-label,
+        .input-field:not(:placeholder-shown) ~ .input-label {
+            top: 14px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--brand-primary);
+        }
+        
+        .input-field:not(:placeholder-shown):not(:focus) ~ .input-label {
+            color: var(--text-muted);
+        }
+
+        .pref-group {
+            margin-bottom: 20px;
+        }
+        
+        .pref-label-main {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .pref-options {
+            display: flex;
+            gap: 12px;
+        }
+
+        .pref-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .pref-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .pref-option label {
+            display: block;
+            text-align: center;
+            padding: 14px 10px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            background: var(--surface-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .pref-option input[type="radio"]:checked + label {
+            border-color: var(--brand-primary);
+            background-color: rgba(79, 70, 229, 0.04);
+            color: var(--brand-primary);
+        }
+
+        .pref-option input[type="radio"]:focus-visible + label {
+            outline: 2px solid var(--brand-primary);
+            outline-offset: 2px;
+        }
+
+        .pwd-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pwd-toggle:hover {
+            color: var(--brand-primary);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--brand-primary);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--brand-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            font-size: 0.95rem;
+        }
+
+        .forgot-link {
+            color: var(--brand-primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        
+        .forgot-link:hover {
+            color: var(--brand-primary-hover);
+            text-decoration: underline;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .checkbox-container input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--brand-primary);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .alert-message {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #B91C1C;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @media (max-width: 1024px) {
+            .hero-section { width: 45%; padding: 40px; }
+            .form-section { width: 55%; padding: 32px; }
+            .hero-content h2 { font-size: 2.2rem; }
+            .hero-content p { font-size: 1rem; }
+        }
+
+        @media (max-width: 768px) {
+            /* Transform flex row to standard vertical scrolling stack */
+            .app-wrapper { 
+                flex-direction: column; 
+                min-height: auto; 
+            }
+            
+            .hero-section {
+                width: 100%;
+                /* Fixed viewport height chunk for mobile header */
+                height: 32vh;
+                min-height: 280px;
+                padding: 32px 24px;
+                justify-content: center;
+            }
+            
+            .hero-content { 
+                max-width: 100%; 
+                text-align: left;
+            }
+            
+            .hero-content h2 { 
+                font-size: clamp(2rem, 7vw, 2.5rem); 
+                margin-bottom: 8px; 
+            }
+            
+            .hero-content p { 
+                font-size: 1rem; 
+                line-height: 1.5; 
+                max-width: 90%;
+            }
+
+            .form-section {
+                width: 100%;
+                /* Remove height restrictions, let it flow naturally */
+                height: auto;
+                min-height: 68vh;
+                padding: 24px 16px 40px;
+                align-items: flex-start; /* Align to top instead of center */
+                background: var(--bg-color);
+            }
+            
+            .form-container {
+                max-width: 100%;
+                padding: 28px 20px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+                border: 1px solid rgba(226, 232, 240, 0.9);
+                /* Add a subtle negative margin to pull form up over the hero image slightly */
+                margin-top: -30px; 
+                z-index: 10;
+                position: relative;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .hero-section {
+                height: 35vh;
+                min-height: 260px;
+                padding: 24px 20px;
+            }
+            
+            .brand-logo { 
+                font-size: 1.35rem; 
+                margin-bottom: 24px; 
+            }
+            
+            .brand-logo svg { 
+                width: 28px; 
+                height: 28px; 
+            }
+            
+            .auth-tabs { margin-bottom: 24px; }
+            .auth-tab { padding: 10px 12px; font-size: 0.9rem; }
+            
+            .form-header h3 { font-size: 1.35rem; }
+            
+            .input-row { flex-direction: column; gap: 0; }
+            
+            .pref-options { gap: 8px; flex-direction: column; }
+            .pref-option label { padding: 12px 10px; font-size: 0.9rem; }
+            
+            .form-footer { 
+                flex-direction: column; 
+                gap: 16px; 
+                align-items: flex-start; 
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="layout-container">
-    <div class="brand-section">
-        <h1>Welcome to Your Space</h1>
-        <p>Connect with the perfect host or find the ideal seeker. Experience a seamless and secure way to manage your living arrangements.</p>
+    <div class="app-wrapper">
+        <aside class="hero-section">
+            <div class="slideshow">
+                <!-- Slide 1: Modern Apartment (Original) -->
+                <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200" alt="Modern Apartment" class="slide">
+                
+                <!-- Slide 2: Replaced Happy Roommate -> Bunk Beds next to window -->
+                <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=1200" alt="Bunk beds next to window" class="slide">
+                
+                <!-- Slide 3: Replaced Shared Living -> People sharing space with laptop -->
+                <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=1200" alt="Shared Living Space with Laptop" class="slide">
+            </div>
+            <div class="hero-content">
+                <h2>Find your perfect space.<br><span>Split the cost.</span></h2>
+                <p>Join RentMate today to discover affordable shared PGs, beautiful flats, and compatible roommates matching your vibe.</p>
+            </div>
+        </aside>
+
+        <main class="form-section">
+            <div class="form-container">
+                <a href="#" class="brand-logo">
+                    <!-- Home/Building Icon -->
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3zm0 2.5l5.5 4.95V18h-1v-6H7.5v6h-1v-7.55L12 5.5z"/>
+                        <path d="M12 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                    </svg>
+                    RentMate
+                </a>
+
+                <div class="auth-tabs">
+                    <div class="auth-tab active" onclick="switchTab('login')" id="tab-login">Log In</div>
+                    <div class="auth-tab" onclick="switchTab('signup')" id="tab-signup">Sign Up</div>
+                </div>
+
+                <div class="auth-view active" id="view-login">
+                    <div class="form-header">
+                        <h3>Welcome back!</h3>
+                        <p>Log in to manage your spaces and roommate requests.</p>
+                    </div>
+
+                    <form id="loginForm" onsubmit="handleLogin(event)">
+                        <div class="input-group">
+                            <input type="email" id="logEmail" class="input-field" placeholder=" " required>
+                            <label for="logEmail" class="input-label">Email Address</label>
+                        </div>
+
+                        <div class="input-group">
+                            <input type="password" id="logPassword" class="input-field" placeholder=" " required>
+                            <label for="logPassword" class="input-label">Password</label>
+                            <button type="button" class="pwd-toggle" onclick="togglePassword('logPassword')" aria-label="Toggle Password Visibility">
+                                <!-- Eye Icon -->
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                        </div>
+
+                        <div class="form-footer" style="margin-bottom: 24px;">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="rememberMe">
+                                <span>Remember me</span>
+                            </label>
+                            <a href="#" class="forgot-link">Forgot Password?</a>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="btn-login">
+                            Sign In
+                        </button>
+                        
+                        <div id="login-alert" class="alert-message"></div>
+                    </form>
+                </div>
+
+                <div class="auth-view" id="view-signup">
+                    <div class="form-header">
+                        <h3>Create an account</h3>
+                        <p>Start your journey to affordable living today.</p>
+                    </div>
+
+                    <form id="signupForm" onsubmit="handleSignup(event)">
+                        
+                        <div class="pref-group">
+                            <span class="pref-label-main">I am a</span>
+                            <div class="pref-options">
+                                <div class="pref-option">
+                                    <input type="radio" id="role-seeker" name="role" value="seeker" checked required>
+                                    <label for="role-seeker">Seeker</label>
+                                </div>
+                                <div class="pref-option">
+                                    <input type="radio" id="role-host" name="role" value="host" required>
+                                    <label for="role-host">Host</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <input type="text" id="regFirstName" class="input-field" placeholder=" " required>
+                                <label for="regFirstName" class="input-label">First Name</label>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="regLastName" class="input-field" placeholder=" " required>
+                                <label for="regLastName" class="input-label">Last Name</label>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <input type="email" id="regEmail" class="input-field" placeholder=" " required>
+                            <label for="regEmail" class="input-label">Email Address</label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <input type="tel" id="regPhone" class="input-field" placeholder=" " pattern="[0-9]{10}" title="Enter a valid 10-digit number" required>
+                            <label for="regPhone" class="input-label">Mobile Number</label>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <input type="password" id="regPassword" class="input-field" placeholder=" " minlength="8" required>
+                                <label for="regPassword" class="input-label">Password</label>
+                            </div>
+                            <div class="input-group">
+                                <input type="password" id="regConfirmPassword" class="input-field" placeholder=" " required>
+                                <label for="regConfirmPassword" class="input-label">Confirm Password</label>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-container" style="margin: 16px 0 24px;">
+                            <input type="checkbox" required>
+                            <span>I agree to the <a href="#" class="forgot-link">Terms</a> and <a href="#" class="forgot-link">Privacy Policy</a></span>
+                        </label>
+
+                        <button type="submit" class="btn-primary" id="btn-signup">
+                            Create Account
+                        </button>
+
+                        <div id="signup-alert" class="alert-message"></div>
+                    </form>
+                </div>
+                
+            </div>
+        </main>
     </div>
 
-    <div class="login-section">
-        <div class="login-wrapper">
-            <h2 id="title-text">Host Login</h2>
+    <script>
+        // Tab Switching Logic
+        function switchTab(tab) {
+            // Update Tab Styles
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-signup').classList.remove('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+
+            // Update View Visibility
+            document.getElementById('view-login').classList.remove('active');
+            document.getElementById('view-signup').classList.remove('active');
+            document.getElementById('view-' + tab).classList.add('active');
             
-            <div class="toggle-container">
-                <div class="slider" id="slider-bg"></div>
-                <button class="toggle-btn active" id="btn-host" onclick="switchRole('Host')">Host</button>
-                <button class="toggle-btn" id="btn-seeker" onclick="switchRole('Seeker')">Seeker</button>
-            </div>
-
-            <form id="auth-form">
-                <div class="input-field">
-                    <input type="text" id="username" placeholder="Username" required>
-                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                </div>
-                
-                <div class="input-field">
-                    <input type="password" id="password" placeholder="Password" required>
-                    <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM8.9 6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H8.9V6z"/></svg>
-                </div>
-                
-                <button type="submit" class="action-btn">Login</button>
-            </form>
-
-            <div class="signup-link">
-                Don't have an account? <a href="registration.html">Sign up</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    function switchRole(role) {
-        const title = document.getElementById('title-text');
-        const btnHost = document.getElementById('btn-host');
-        const btnSeeker = document.getElementById('btn-seeker');
-        const slider = document.getElementById('slider-bg');
-        
-        title.innerText = role + ' Login';
-        
-        if(role === 'Host') {
-            btnHost.classList.add('active');
-            btnSeeker.classList.remove('active');
-            slider.style.left = '6px';
-        } else {
-            btnSeeker.classList.add('active');
-            btnHost.classList.remove('active');
-            slider.style.left = '50%';
+            // Clear alerts on switch
+            document.getElementById('login-alert').style.display = 'none';
+            document.getElementById('signup-alert').style.display = 'none';
         }
-    }
 
-    document.getElementById('auth-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-    });
-</script>
+        // Password Visibility Toggle
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        }
 
+        // Display Alert Message Helper
+        function showAlert(elementId, message, type) {
+            const alertEl = document.getElementById(elementId);
+            alertEl.textContent = message;
+            alertEl.className = `alert-message ${type === 'error' ? 'alert-error' : 'alert-success'}`;
+            alertEl.style.display = 'block';
+        }
+
+        // Mock Login Handler
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login');
+            const alertId = 'login-alert';
+            
+            btn.innerHTML = 'Authenticating...';
+            btn.disabled = true;
+            document.getElementById(alertId).style.display = 'none';
+
+            // Simulate API Request
+            setTimeout(() => {
+                const email = document.getElementById('logEmail').value;
+                if(email.includes('@')) {
+                    showAlert(alertId, 'Login successful! Redirecting to dashboard...', 'success');
+                } else {
+                    showAlert(alertId, 'Invalid email or password. Please try again.', 'error');
+                }
+                
+                btn.innerHTML = 'Sign In';
+                btn.disabled = false;
+            }, 1500);
+        }
+
+        // Mock Signup Handler
+        async function handleSignup(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-signup');
+            const alertId = 'signup-alert';
+            
+            const pwd = document.getElementById('regPassword').value;
+            const confirmPwd = document.getElementById('regConfirmPassword').value;
+
+            // Basic Client-side validation
+            if (pwd !== confirmPwd) {
+                showAlert(alertId, 'Passwords do not match!', 'error');
+                return;
+            }
+
+            btn.innerHTML = 'Creating Account...';
+            btn.disabled = true;
+            document.getElementById(alertId).style.display = 'none';
+
+            // Simulate API Request
+            setTimeout(() => {
+                showAlert(alertId, 'Account created successfully! You can now log in.', 'success');
+                document.getElementById('signupForm').reset();
+                
+                btn.innerHTML = 'Create Account';
+                btn.disabled = false;
+                
+                // Auto switch to login after 2 seconds
+                setTimeout(() => switchTab('login'), 2000);
+            }, 2000);
+        }
+    </script>
 </body>
 </html>
