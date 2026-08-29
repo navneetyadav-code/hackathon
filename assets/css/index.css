@@ -1,0 +1,30 @@
+
+        /* Custom base styles to complement Tailwind */
+        body {
+            background-color: theme('colors.bg');
+            color: theme('colors.text.main');
+            overflow-x: hidden;
+        }
+        
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, theme('colors.brand.primary'), theme('colors.brand.secondary'));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Image overlay gradient */
+        .img-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0) 50%);
+            border-radius: inherit;
+        }
