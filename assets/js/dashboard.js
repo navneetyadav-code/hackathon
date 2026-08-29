@@ -84,7 +84,7 @@
         },
         logout() {
             sessionStorage.removeItem('thikana_user');
-            window.location.href = 'login.php';
+            window.location.href = 'logout.php';
         }
     };
 
