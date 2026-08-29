@@ -399,7 +399,7 @@ function getPropImage($path) {
                                             <?= (int)$prop['available_rooms'] ?> Room(s) Left
                                         </span>
                                         <button class="text-sm font-bold text-brand-primary dark:text-indigo-400 hover:text-brand-hover" onclick="populateMatcherAndOpen(<?= $prop['rent'] ?>)">
-                                            Analyze Match →
+                                            Find Similar
                                         </button>
                                     </div>
                                 </div>
@@ -458,8 +458,8 @@ function getPropImage($path) {
             <section id="matcher" class="page-section">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
                     <div>
-                        <h1 class="text-3xl font-extrabold mb-2">Smart Property Match</h1>
-                        <p class="text-slate-500 dark:text-slate-400">Analyze a property share against your income.</p>
+                        <h1 class="text-3xl font-extrabold mb-2">Find Best Budget Rooms</h1>
+                        <p class="text-slate-500 dark:text-slate-400">Set your monthly budget and let AI Insight pick a strong room from live listings.</p>
                     </div>
                     <button class="bg-white dark:bg-slate-800 border-2 border-brand-primary dark:border-indigo-500 text-brand-primary dark:text-indigo-400 px-5 py-2.5 rounded-xl font-bold hover:bg-brand-light dark:hover:bg-slate-700 transition-colors" onclick="openPage('calculator')">
                         Open Full Budget
@@ -472,75 +472,56 @@ function getPropImage($path) {
                             <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80" alt="Apartment" class="w-full h-full object-cover">
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
                             <div class="absolute bottom-4 left-6 text-white">
-                                <span class="bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded mb-2 inline-block">Selected Property</span>
-                                <h2 class="text-2xl font-bold">Analysis Target Property</h2>
+                                <span class="bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded mb-2 inline-block">AI Insight</span>
+                                <h2 class="text-2xl font-bold">Budget Room Finder</h2>
                             </div>
                             <div class="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-extrabold shadow-sm" id="matcher-base-rent" data-value="15000">
-                                ₹15,000 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/mo total</span>
+                                ₹15,000 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">budget</span>
                             </div>
                         </div>
                         <div class="p-6 flex-1 bg-white dark:bg-slate-800">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <h3 class="font-bold text-lg dark:text-white">Current Setup</h3>
-                                    <p class="text-sm text-slate-500 dark:text-slate-400">Calculating based on total rent</p>
+                                    <h3 class="font-bold text-lg dark:text-white">Live Database Search</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Filters active rooms under your selected rent range.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col justify-center">
-                        <h3 class="font-bold text-xl mb-6">Analyze Your Fit</h3>
+                        <h3 class="font-bold text-xl mb-6">Find Your Room</h3>
                         
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">Room Target Type</label>
-                            <div class="bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex">
-                                <button id="btn-standard" class="flex-1 py-2 text-center rounded-lg font-semibold bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm transition-all" onclick="setRoomType('standard')">Standard Share</button>
-                                <button id="btn-master" class="flex-1 py-2 text-center rounded-lg font-medium text-slate-500 dark:text-slate-400 transition-all" onclick="setRoomType('master')">Master/Private</button>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
                             <div class="flex justify-between text-sm font-semibold mb-3">
-                                <span>Est. total flat utilities</span>
-                                <span id="utility-val" class="text-brand-primary dark:text-indigo-400">₹2,000</span>
+                                <span>Your monthly room budget</span>
+                                <span id="budget-room-val" class="text-brand-primary dark:text-indigo-400">₹15,000</span>
                             </div>
-                            <input type="range" id="utility-slider" min="0" max="10000" step="500" value="2000" oninput="updateUtility(this.value)">
+                            <input type="range" id="budget-room-slider" min="1000" max="50000" step="500" value="15000" oninput="updateBudgetRoom(this.value)">
                             <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
-                                <span>₹0</span><span>₹10k</span>
+                                <span>₹1k</span><span>₹50k</span>
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Your Monthly Income (₹)</label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                <input type="number" id="user-income" class="input-field pl-8 font-semibold text-lg" placeholder="e.g. 45000" min="0">
-                            </div>
-                        </div>
-
-                        <button class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold shadow-lg shadow-brand-primary/30 hover:bg-brand-hover transition-all" onclick="analyzeMatch()">
-                            Calculate My Share
+                        <button id="find-budget-room-btn" class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold shadow-lg shadow-brand-primary/30 hover:bg-brand-hover transition-all" onclick="findBestBudgetRoom()">
+                            Find Best Budget Room
                         </button>
 
+                        <div id="match-loading-box" class="mt-8 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl p-6 border border-indigo-100 dark:border-indigo-900/50 text-center hidden">
+                            <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 flex items-center justify-center animate-pulse">
+                                <svg class="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <p class="font-extrabold text-slate-900 dark:text-white">Finding Best Rooms.....</p>
+                            <p class="text-sm text-brand-primary dark:text-indigo-300 font-semibold mt-1">AI Insight scanning budget, rent, rooms, and location</p>
+                            <div class="flex justify-center gap-3 mt-5 text-brand-primary dark:text-indigo-300">
+                                <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M5 7v12h14V7M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                                <svg class="w-5 h-5 animate-bounce [animation-delay:120ms]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                                <svg class="w-5 h-5 animate-bounce [animation-delay:240ms]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.519 4.674c.3.921-.755 1.688-1.539 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.784.57-1.838-.197-1.539-1.118l1.519-4.674a1 1 0 00-.363-1.118L3.077 10.1c-.783-.57-.38-1.81.588-1.81H8.58a1 1 0 00.95-.69l1.519-4.674z"></path></svg>
+                            </div>
+                        </div>
+
                         <div id="match-result-box" class="mt-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hidden">
-                            <div class="flex justify-between items-end mb-4">
-                                <div>
-                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Your Est. Share</p>
-                                    <h2 id="share-amount" class="text-3xl font-extrabold text-slate-900 dark:text-white">₹0</h2>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Income Used</p>
-                                    <h2 id="percentage-used" class="text-2xl font-bold text-slate-900 dark:text-white">0%</h2>
-                                </div>
-                            </div>
-                            
-                            <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full mb-3 overflow-hidden">
-                                <div id="meter-bar" class="h-full rounded-full transition-all duration-500 w-0"></div>
-                            </div>
-                            
-                            <p id="breakdown-info" class="text-xs text-slate-500 dark:text-slate-400 text-center mb-4"></p>
-                            <div id="status-text" class="text-sm font-bold p-3 rounded-lg text-center"></div>
+                            <div id="budget-room-result"></div>
                         </div>
                     </div>
                 </div>
@@ -719,9 +700,15 @@ function getPropImage($path) {
 
     function populateMatcherAndOpen(rent) {
         const el = document.getElementById('matcher-base-rent');
+        const slider = document.getElementById('budget-room-slider');
+        const amount = parseInt(rent) || 15000;
         if (el) {
-            el.dataset.value = rent;
-            el.innerHTML = `₹${parseInt(rent).toLocaleString()} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/mo total</span>`;
+            el.dataset.value = amount;
+            el.innerHTML = `₹${amount.toLocaleString()} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">budget</span>`;
+        }
+        if (slider) {
+            slider.value = Math.min(Math.max(amount, parseInt(slider.min)), parseInt(slider.max));
+            updateBudgetRoom(slider.value);
         }
         openPage('matcher');
     }
@@ -792,7 +779,7 @@ function getPropImage($path) {
                             ${prop.available_rooms} Room(s) Left
                         </span>
                         <button class="text-sm font-bold text-brand-primary dark:text-indigo-400 hover:text-brand-hover" onclick="populateMatcherAndOpen(${prop.rent})">
-                            Analyze Match →
+                            Find Similar
                         </button>
                     </div>
                 </div>
@@ -801,69 +788,132 @@ function getPropImage($path) {
         });
     }
 
-    // Matcher logic
-    let currentRoomType = 'standard';
-    function setRoomType(type) {
-        currentRoomType = type;
-        const btnS = document.getElementById('btn-standard');
-        const btnM = document.getElementById('btn-master');
-        
-        btnS.className = type === 'standard' 
-            ? "flex-1 py-2 text-center rounded-lg font-semibold bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm transition-all" 
-            : "flex-1 py-2 text-center rounded-lg font-medium text-slate-500 dark:text-slate-400 transition-all";
-            
-        btnM.className = type === 'master' 
-            ? "flex-1 py-2 text-center rounded-lg font-semibold bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm transition-all" 
-            : "flex-1 py-2 text-center rounded-lg font-medium text-slate-500 dark:text-slate-400 transition-all";
+    // Budget room finder logic
+    let budgetRoomTimer = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
     }
 
-    function updateUtility(val) {
-        document.getElementById('utility-val').innerText = `₹${parseInt(val).toLocaleString()}`;
+    function updateBudgetRoom(val) {
+        const budget = parseInt(val) || 0;
+        const label = document.getElementById('budget-room-val');
+        const badge = document.getElementById('matcher-base-rent');
+
+        if (label) {
+            label.innerText = `₹${budget.toLocaleString()}`;
+        }
+        if (badge) {
+            badge.dataset.value = budget;
+            badge.innerHTML = `₹${budget.toLocaleString()} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">budget</span>`;
+        }
     }
 
-    function analyzeMatch() {
-        const baseRentRaw = document.getElementById('matcher-base-rent').dataset.value;
-        const baseRent = parseInt(baseRentRaw) || 0;
-        const utility = parseInt(document.getElementById('utility-slider').value) || 0;
-        const income = parseInt(document.getElementById('user-income').value);
-
-        if (!income || income <= 0) {
-            alert('Please enter a valid monthly income.');
-            return;
+    function pickBestBudgetRoom(candidates, budget) {
+        if (candidates.length === 1) {
+            return { selected: candidates[0], compared: candidates };
         }
 
-        // Simple logic for standard vs master room cost split
-        let userRentShare = currentRoomType === 'master' ? (baseRent * 0.6) : (baseRent * 0.4); 
-        let userUtilityShare = utility / 2; // Split 50/50 for utility
-        
-        let totalEst = Math.round(userRentShare + userUtilityShare);
-        let percentage = ((totalEst / income) * 100).toFixed(1);
-        
-        document.getElementById('share-amount').innerText = `₹${totalEst.toLocaleString()}`;
-        document.getElementById('percentage-used').innerText = `${percentage}%`;
-        
-        const meter = document.getElementById('meter-bar');
-        const status = document.getElementById('status-text');
-        
-        let pVal = Math.min(percentage, 100);
-        meter.style.width = `${pVal}%`;
-        
-        if (percentage <= 30) {
-            meter.className = "h-full rounded-full transition-all duration-500 bg-green-500";
-            status.className = "text-sm font-bold p-3 rounded-lg text-center bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-            status.innerText = "Great match! Highly affordable based on standard 30% rules.";
-        } else if (percentage <= 45) {
-            meter.className = "h-full rounded-full transition-all duration-500 bg-yellow-500";
-            status.className = "text-sm font-bold p-3 rounded-lg text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-            status.innerText = "Stretch budget. Manageable but might require tight personal budgeting.";
-        } else {
-            meter.className = "h-full rounded-full transition-all duration-500 bg-red-500";
-            status.className = "text-sm font-bold p-3 rounded-lg text-center bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-            status.innerText = "High financial strain. This exceeds safe rental allocations.";
-        }
-        
-        document.getElementById('breakdown-info').innerText = `Rent: ₹${Math.round(userRentShare).toLocaleString()} | Util: ₹${Math.round(userUtilityShare).toLocaleString()}`;
-        document.getElementById('match-result-box').classList.remove('hidden');
+        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+        const compared = shuffled.slice(0, 2);
+        const score = prop => {
+            const rent = parseInt(prop.rent) || 0;
+            const availableRooms = parseInt(prop.available_rooms) || 0;
+            const budgetFit = budget > 0 ? rent / budget : 0;
+
+            return (budgetFit * 70) + (Math.min(availableRooms, 5) * 6);
+        };
+
+        compared.sort((a, b) => score(b) - score(a));
+        return { selected: compared[0], compared };
+    }
+
+    function findBestBudgetRoom() {
+        const slider = document.getElementById('budget-room-slider');
+        const loadingBox = document.getElementById('match-loading-box');
+        const resultBox = document.getElementById('match-result-box');
+        const result = document.getElementById('budget-room-result');
+        const button = document.getElementById('find-budget-room-btn');
+        const budget = parseInt(slider?.value) || 0;
+
+        clearTimeout(budgetRoomTimer);
+        resultBox.classList.add('hidden');
+        loadingBox.classList.remove('hidden');
+        button.disabled = true;
+        button.classList.add('opacity-70', 'cursor-not-allowed');
+        button.textContent = 'Finding...';
+
+        budgetRoomTimer = setTimeout(() => {
+            const properties = (window.realProperties || []).filter(prop => {
+                const rent = parseInt(prop.rent) || 0;
+                const rooms = parseInt(prop.available_rooms) || 0;
+                return rent > 0 && rent <= budget && rooms > 0;
+            });
+
+            loadingBox.classList.add('hidden');
+            button.disabled = false;
+            button.classList.remove('opacity-70', 'cursor-not-allowed');
+            button.textContent = 'Find Best Budget Room';
+
+            if (properties.length === 0) {
+                result.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h4 class="font-extrabold text-slate-900 dark:text-white">No rooms under ₹${budget.toLocaleString()}</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Try increasing your budget range and search again.</p>
+                    </div>`;
+                resultBox.classList.remove('hidden');
+                return;
+            }
+
+            const { selected, compared } = pickBestBudgetRoom(properties, budget);
+            const imgPath = selected.main_image ? selected.main_image : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80';
+            const rent = parseInt(selected.rent) || 0;
+            const savings = Math.max(0, budget - rent);
+            const comparedText = compared.length > 1
+                ? `AI Insight compared 2 matching rooms and selected the stronger fit.`
+                : `AI Insight found 1 matching room in this range.`;
+
+            result.innerHTML = `
+                <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                    <div class="h-44 relative bg-slate-200 dark:bg-slate-800">
+                        <img src="${escapeHtml(imgPath)}" alt="${escapeHtml(selected.property_name)}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                        <div class="absolute left-4 bottom-4 right-4 flex items-end justify-between gap-3">
+                            <div>
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-brand-primary text-white text-xs font-bold uppercase">${escapeHtml(selected.property_type)}</span>
+                                <h4 class="text-white text-xl font-extrabold mt-2 leading-tight">${escapeHtml(selected.property_name)}</h4>
+                            </div>
+                            <div class="bg-white text-slate-900 rounded-lg px-3 py-1.5 font-extrabold whitespace-nowrap">₹${rent.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">${escapeHtml(selected.address)}, ${escapeHtml(selected.city)}</p>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                                <p class="text-xs font-bold text-slate-500 dark:text-slate-400">Rooms Left</p>
+                                <p class="font-extrabold text-slate-900 dark:text-white">${parseInt(selected.available_rooms) || 0}</p>
+                            </div>
+                            <div class="rounded-lg bg-green-50 dark:bg-green-900/20 p-3">
+                                <p class="text-xs font-bold text-green-700 dark:text-green-300">Under Budget</p>
+                                <p class="font-extrabold text-green-700 dark:text-green-300">₹${savings.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="text-sm font-bold p-3 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 text-center">
+                            ${comparedText}
+                        </div>
+                    </div>
+                </div>`;
+            resultBox.classList.remove('hidden');
+        }, 5000);
     }
 
     // Split calculator logic
