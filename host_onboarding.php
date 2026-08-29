@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
-    $payload = is_array($input) ? $input : [];
+    // Switched to standard POST payload to allow file handling
+    $payload = $_POST;
 
     if (($payload['action'] ?? '') !== 'save_onboarding') {
         echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
@@ -38,6 +38,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($payload[$field]) || trim((string) $payload[$field]) === '') {
             echo json_encode(['status' => 'error', 'message' => 'Please complete all required property details.']);
             exit;
+        }
+    }
+
+    // Process file upload if one was provided
+    $imagePath = null;
+    if (isset($_FILES['property_photo']) && $_FILES['property_photo']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/assets/img/upload/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true); // Create directory securely if it doesn't exist
+        }
+        $fileExtension = pathinfo($_FILES['property_photo']['name'], PATHINFO_EXTENSION);
+        $fileName = time() . '_' . uniqid() . '.' . $fileExtension;
+        $targetFile = $uploadDir . $fileName;
+        
+        if (move_uploaded_file($_FILES['property_photo']['tmp_name'], $targetFile)) {
+            $imagePath = 'assets/img/upload/' . $fileName;
         }
     }
 
@@ -57,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rules = array_values(array_unique(array_filter(array_map('strval', $payload['rules'] ?? []))));
 
         $stmt = $pdo->prepare(
-            'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, amenities, house_rules, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+            'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, amenities, house_rules, image_path, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
         );
 
         $stmt->execute([
@@ -74,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deposit,
             json_encode($amenities, JSON_THROW_ON_ERROR),
             json_encode($rules, JSON_THROW_ON_ERROR),
+            $imagePath,
             'active'
         ]);
 
@@ -368,7 +385,7 @@ $firstName = $_SESSION['first_name'] ?? 'User';
                         <div>
                             <span class="label-text">Upload Property Photo</span>
                             <div class="mt-2 w-full flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl hover:border-brand-primary hover:bg-brand-light/30 dark:hover:bg-indigo-900/10 transition-colors relative cursor-pointer" id="dropzone">
-                                <input type="file" id="property_photo" name="property_photo" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*">
+                                <input type="file" id="property_photo" name="property_photo" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/">
                                 <div class="space-y-2 text-center pointer-events-none">
                                     <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -530,26 +547,13 @@ $firstName = $_SESSION['first_name'] ?? 'User';
 
             const form = document.getElementById('onboarding-form');
             const formData = new FormData(form);
-            const payload = {
-                action: 'save_onboarding',
-                property_count: formData.get('property_count'),
-                property_type: formData.get('property_type'),
-                property_name: formData.get('property_name'),
-                address: formData.get('address'),
-                city: formData.get('city'),
-                total_rooms: formData.get('total_rooms'),
-                available_rooms: formData.get('available_rooms'),
-                rent: formData.get('rent'),
-                deposit: formData.get('deposit') || 0,
-                amenities: formData.getAll('amenities[]'),
-                rules: formData.getAll('rules[]')
-            };
+            formData.append('action', 'save_onboarding');
 
             try {
+                // Not stringifying as JSON anymore to let the file go through correctly via multipart/form-data
                 const response = await fetch('host_onboarding.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: formData 
                 });
 
                 const data = await response.json();

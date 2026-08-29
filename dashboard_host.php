@@ -48,6 +48,39 @@ function thikana_property_icon(string $type): string
     ][$type] ?? 'PR';
 }
 
+function thikana_handle_host_image_upload($file, int $userId): ?string
+{
+    if (!isset($file['name']) || !$file['name']) {
+        return null;
+    }
+
+    if (!is_array($file) || !isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return null;
+    }
+
+    $allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($file['tmp_name']);
+
+    if (!in_array($mimeType, $allowed, true)) {
+        throw new InvalidArgumentException('Only JPG, PNG, and WebP images are allowed.');
+    }
+
+    $uploadDir = __DIR__ . '/uploads/host_onboarding/';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('Unable to create upload directory.');
+    }
+
+    $safeFileName = 'host_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $targetPath = $uploadDir . $safeFileName;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        throw new RuntimeException('Failed to upload image.');
+    }
+
+    return '/uploads/host_onboarding/' . $safeFileName;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
@@ -56,8 +89,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
-    $payload = is_array($input) ? $input : [];
+    $payload = [];
+    $uploadedImage = null;
+
+    if (isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+        $payload = $_POST;
+        if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $uploadedImage = $_FILES['image'];
+        }
+    } else {
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true);
+        $payload = is_array($input) ? $input : [];
+    }
+
     $action = $payload['action'] ?? '';
 
     try {
@@ -71,6 +116,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rent = (float) ($payload['rent'] ?? 0);
             $deposit = (float) ($payload['deposit'] ?? 0);
             $status = trim((string) ($payload['status'] ?? 'active'));
+            $imagePath = null;
+
+            if ($uploadedImage) {
+                $imagePath = thikana_handle_host_image_upload($uploadedImage, (int) $_SESSION['user_id']);
+            } elseif (!empty($payload['image_path'])) {
+                $imagePath = trim((string) $payload['image_path']);
+            }
 
             if ($propertyName === '' || $address === '' || $city === '' || !array_key_exists($propertyType, $propertyTypes)) {
                 echo json_encode(['status' => 'error', 'message' => 'Please complete all property details.']);
@@ -84,10 +136,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($action === 'save_property') {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, status, created_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                    'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, status, image_path, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
                 );
-                $stmt->execute([$_SESSION['user_id'], 'single', $propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status]);
+                $stmt->execute([$_SESSION['user_id'], 'single', $propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status, $imagePath]);
+
+                try {
+                    $checkHostOnboarding = $pdo->prepare('SELECT 1 FROM host_onboarding WHERE user_id = ? LIMIT 1');
+                    $checkHostOnboarding->execute([$_SESSION['user_id']]);
+                    if ($checkHostOnboarding->fetchColumn()) {
+                        $stmtHost = $pdo->prepare('UPDATE host_onboarding SET image_path = ? WHERE user_id = ?');
+                        $stmtHost->execute([$imagePath, $_SESSION['user_id']]);
+                    } else {
+                        $stmtHost = $pdo->prepare('INSERT INTO host_onboarding (user_id, image_path, created_at) VALUES (?, ?, NOW())');
+                        $stmtHost->execute([$_SESSION['user_id'], $imagePath]);
+                    }
+                } catch (Throwable $e) {
+                    error_log('Host onboarding image sync failed: ' . $e->getMessage());
+                }
+
                 echo json_encode(['status' => 'success', 'message' => 'Property added successfully!']);
                 exit;
             }
@@ -98,12 +165,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
-            $stmt = $pdo->prepare(
-                'UPDATE properties
-                 SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, status = ?
-                 WHERE id = ? AND user_id = ?'
-            );
-            $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status, $propertyId, $_SESSION['user_id']]);
+            if ($imagePath !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE properties
+                     SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, status = ?, image_path = ?
+                     WHERE id = ? AND user_id = ?'
+                );
+                $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status, $imagePath, $propertyId, $_SESSION['user_id']]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE properties
+                     SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, status = ?
+                     WHERE id = ? AND user_id = ?'
+                );
+                $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status, $propertyId, $_SESSION['user_id']]);
+            }
+
+            try {
+                $checkHostOnboarding = $pdo->prepare('SELECT 1 FROM host_onboarding WHERE user_id = ? LIMIT 1');
+                $checkHostOnboarding->execute([$_SESSION['user_id']]);
+                if ($imagePath !== null) {
+                    if ($checkHostOnboarding->fetchColumn()) {
+                        $stmtHost = $pdo->prepare('UPDATE host_onboarding SET image_path = ? WHERE user_id = ?');
+                        $stmtHost->execute([$imagePath, $_SESSION['user_id']]);
+                    } else {
+                        $stmtHost = $pdo->prepare('INSERT INTO host_onboarding (user_id, image_path, created_at) VALUES (?, ?, NOW())');
+                        $stmtHost->execute([$_SESSION['user_id'], $imagePath]);
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('Host onboarding image sync failed: ' . $e->getMessage());
+            }
 
             echo json_encode([
                 'status' => $stmt->rowCount() >= 0 ? 'success' : 'error',
@@ -115,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
     } catch (Throwable $e) {
         error_log('Host dashboard property save failed: ' . $e->getMessage());
-        echo json_encode(['status' => 'error', 'message' => 'Unable to save property. Please try again.']);
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
     exit;
 }
@@ -125,6 +217,22 @@ if ($pdo) {
     $stmt = $pdo->prepare('SELECT * FROM properties WHERE user_id = ? ORDER BY created_at DESC, id DESC');
     $stmt->execute([$_SESSION['user_id']]);
     $properties = $stmt->fetchAll();
+
+    $hostOnboardingImage = null;
+    try {
+        $hostImageStmt = $pdo->prepare('SELECT image_path FROM host_onboarding WHERE user_id = ? LIMIT 1');
+        $hostImageStmt->execute([$_SESSION['user_id']]);
+        $hostOnboardingImage = $hostImageStmt->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('Host onboarding image lookup failed: ' . $e->getMessage());
+    }
+
+    foreach ($properties as &$property) {
+        if (empty($property['image_path']) && !empty($hostOnboardingImage)) {
+            $property['image_path'] = $hostOnboardingImage;
+        }
+    }
+    unset($property);
 }
 
 $featuredProperty = $properties[0] ?? null;
@@ -304,7 +412,12 @@ $thikanaUser = [
                 <div class="card mb-8 hover:border-brand-primary/50 transition-colors">
                     <?php if ($featuredProperty): ?>
                     <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                        <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-lg font-extrabold"><?= htmlspecialchars(thikana_property_icon($featuredProperty['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php if (!empty($featuredProperty['image_path'])): ?>
+                            <img src="<?= htmlspecialchars($featuredProperty['image_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Property Image" class="w-16 h-16 rounded-2xl object-cover border border-slate-200 dark:border-slate-700">
+                        <?php else: ?>
+                            <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-lg font-extrabold"><?= htmlspecialchars(thikana_property_icon($featuredProperty['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                        
                         <div class="flex-1 cursor-pointer" onclick='openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             <div class="flex flex-wrap items-center gap-3 mb-1">
                                 <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$featuredProperty['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
@@ -318,7 +431,7 @@ $thikanaUser = [
                                 <?= htmlspecialchars($featuredProperty['address'] . ', ' . $featuredProperty['city'], ENT_QUOTES, 'UTF-8') ?>
                             </p>
                         </div>
-                        <button class="btn-secondary w-full md:w-auto whitespace-nowrap flex items-center justify-center gap-2" onclick='openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                        <button class="btn-secondary w-full md:w-auto whitespace-nowrap flex items-center justify-center gap-2" onclick='openPage("properties", document.querySelector("[data-page=\"properties\"]")); openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             Manage Property
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </button>
@@ -426,7 +539,12 @@ $thikanaUser = [
                     <?php $propertyPayload = json_encode($property, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
                     <article class="card hover:border-brand-primary/50 transition-colors">
                         <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-sm font-extrabold shrink-0"><?= htmlspecialchars(thikana_property_icon($property['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                            <?php if (!empty($property['image_path'])): ?>
+                                <img src="<?= htmlspecialchars($property['image_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Property Image" class="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700">
+                            <?php else: ?>
+                                <div class="w-12 h-12 rounded-xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-sm font-extrabold shrink-0"><?= htmlspecialchars(thikana_property_icon($property['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                            <?php endif; ?>
+                            
                             <div class="flex-1 min-w-0">
                                 <div class="flex flex-wrap items-center gap-2 mb-2">
                                     <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$property['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
