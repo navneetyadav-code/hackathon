@@ -17,6 +17,123 @@ if ($redirect !== 'dashboard_host.php') {
     exit;
 }
 
+$pdo = thikana_db();
+$propertyTypes = [
+    'pg' => 'PG / Hostel',
+    'flat' => 'Flat / Apartment',
+    'room' => 'Single Room',
+    'hostel' => 'Hostel'
+];
+$propertyStatuses = ['active', 'inactive', 'draft'];
+
+function thikana_money($amount): string
+{
+    return 'Rs ' . number_format((float) $amount, 0);
+}
+
+function thikana_property_status_class(string $status): string
+{
+    return $status === 'active'
+        ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
+        : 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800';
+}
+
+function thikana_property_icon(string $type): string
+{
+    return [
+        'pg' => 'PG',
+        'flat' => 'FL',
+        'room' => 'RM',
+        'hostel' => 'HS'
+    ][$type] ?? 'PR';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    if (!$pdo) {
+        echo json_encode(['status' => 'error', 'message' => 'Database connection is not available.']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $payload = is_array($input) ? $input : [];
+    $action = $payload['action'] ?? '';
+
+    try {
+        if ($action === 'save_property' || $action === 'update_property') {
+            $propertyName = trim((string) ($payload['property_name'] ?? ''));
+            $propertyType = trim((string) ($payload['property_type'] ?? ''));
+            $address = trim((string) ($payload['address'] ?? ''));
+            $city = trim((string) ($payload['city'] ?? ''));
+            $totalRooms = (int) ($payload['total_rooms'] ?? 0);
+            $availableRooms = (int) ($payload['available_rooms'] ?? 0);
+            $rent = (float) ($payload['rent'] ?? 0);
+            $deposit = (float) ($payload['deposit'] ?? 0);
+            $status = trim((string) ($payload['status'] ?? 'active'));
+
+            if ($propertyName === '' || $address === '' || $city === '' || !array_key_exists($propertyType, $propertyTypes)) {
+                echo json_encode(['status' => 'error', 'message' => 'Please complete all property details.']);
+                exit;
+            }
+
+            if ($totalRooms < 1 || $availableRooms < 0 || $availableRooms > $totalRooms || $rent < 0 || $deposit < 0 || !in_array($status, $propertyStatuses, true)) {
+                echo json_encode(['status' => 'error', 'message' => 'Please enter valid rooms, rent, deposit, and status values.']);
+                exit;
+            }
+
+            if ($action === 'save_property') {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, status, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                );
+                $stmt->execute([$_SESSION['user_id'], 'single', $propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status]);
+                echo json_encode(['status' => 'success', 'message' => 'Property added successfully!']);
+                exit;
+            }
+
+            $propertyId = (int) ($payload['property_id'] ?? 0);
+            if ($propertyId < 1) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid property selected.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare(
+                'UPDATE properties
+                 SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, status = ?
+                 WHERE id = ? AND user_id = ?'
+            );
+            $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $status, $propertyId, $_SESSION['user_id']]);
+
+            echo json_encode([
+                'status' => $stmt->rowCount() >= 0 ? 'success' : 'error',
+                'message' => 'Property updated successfully!'
+            ]);
+            exit;
+        }
+
+        echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+    } catch (Throwable $e) {
+        error_log('Host dashboard property save failed: ' . $e->getMessage());
+        echo json_encode(['status' => 'error', 'message' => 'Unable to save property. Please try again.']);
+    }
+    exit;
+}
+
+$properties = [];
+if ($pdo) {
+    $stmt = $pdo->prepare('SELECT * FROM properties WHERE user_id = ? ORDER BY created_at DESC, id DESC');
+    $stmt->execute([$_SESSION['user_id']]);
+    $properties = $stmt->fetchAll();
+}
+
+$featuredProperty = $properties[0] ?? null;
+$totalProperties = count($properties);
+$totalRooms = array_sum(array_map(fn($property) => (int) $property['total_rooms'], $properties));
+$availableRooms = array_sum(array_map(fn($property) => (int) $property['available_rooms'], $properties));
+$occupiedRooms = max(0, $totalRooms - $availableRooms);
+$monthlyRent = array_sum(array_map(fn($property) => (float) $property['rent'], $properties));
+
 $firstName = $_SESSION['first_name'] ?? 'User';
 $fullName = trim(
     ($_SESSION['first_name'] ?? '') . ' ' .
@@ -185,43 +302,54 @@ $thikanaUser = [
                 </div>
 
                 <div class="card mb-8 hover:border-brand-primary/50 transition-colors">
+                    <?php if ($featuredProperty): ?>
                     <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                        <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 flex items-center justify-center text-3xl">🏠</div>
-                        <div class="flex-1 cursor-pointer" onclick="openModal('edit-property-modal')">
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md">Your Property</span>
-                                <span class="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active
+                        <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-lg font-extrabold"><?= htmlspecialchars(thikana_property_icon($featuredProperty['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                        <div class="flex-1 cursor-pointer" onclick='openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                            <div class="flex flex-wrap items-center gap-3 mb-1">
+                                <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$featuredProperty['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
+                                <span class="flex items-center gap-1 text-xs font-medium <?= thikana_property_status_class((string) $featuredProperty['status']) ?> px-2 py-1 rounded-md">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span> <?= htmlspecialchars(ucfirst((string) $featuredProperty['status']), ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </div>
-                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">Green View PG</h2>
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1"><?= htmlspecialchars($featuredProperty['property_name'], ENT_QUOTES, 'UTF-8') ?></h2>
                             <p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                Near College, Your City
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <?= htmlspecialchars($featuredProperty['address'] . ', ' . $featuredProperty['city'], ENT_QUOTES, 'UTF-8') ?>
                             </p>
                         </div>
-                        <button class="btn-secondary w-full md:w-auto whitespace-nowrap flex items-center justify-center gap-2" onclick="openModal('edit-property-modal')">
+                        <button class="btn-secondary w-full md:w-auto whitespace-nowrap flex items-center justify-center gap-2" onclick='openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                             Manage Property
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </button>
                     </div>
+                    <?php else: ?>
+                    <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                        <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-3xl">+</div>
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">No properties yet</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Add your first room, PG, flat, or hostel to start managing listings.</p>
+                        </div>
+                        <button class="btn-primary w-full md:w-auto" onclick="openModal('add-property-modal')">Add Property</button>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                         <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">4</p>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white"><?= $totalRooms ?></p>
                             <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Rooms</p>
                         </div>
                         <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
-                            <p class="text-2xl font-bold text-brand-primary">2</p>
+                            <p class="text-2xl font-bold text-brand-primary"><?= $availableRooms ?></p>
                             <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Available</p>
                         </div>
                         <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">2</p>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white"><?= $occupiedRooms ?></p>
                             <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Occupied</p>
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="openModal('edit-property-modal')">
-                            <p class="text-2xl font-bold text-green-600 dark:text-green-400">₹24K</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Expected / Month (Edit ✎)</p>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                            <p class="text-2xl font-bold text-green-600 dark:text-green-400"><?= htmlspecialchars(thikana_money($monthlyRent), ENT_QUOTES, 'UTF-8') ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Listed Rent / Month</p>
                         </div>
                     </div>
                 </div>
@@ -235,7 +363,7 @@ $thikanaUser = [
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">List a new room, PG or flat.</p>
                         </div>
                     </button>
-                    <button class="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-md transition-all text-left" onclick="openModal('edit-property-modal')">
+                    <button class="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-md transition-all text-left" onclick="openPage('properties', document.querySelector('[data-page=properties]'))">
                         <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center text-xl">🛏️</div>
                         <div>
                             <h3 class="font-bold text-slate-900 dark:text-white text-sm">Manage Rooms</h3>
@@ -260,7 +388,7 @@ $thikanaUser = [
                         <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center font-bold text-lg shrink-0">R</div>
                         <div class="flex-1">
                             <h3 class="font-bold text-slate-900 dark:text-white">Rahul</h3>
-                            <p class="text-sm font-medium text-brand-primary">Budget: ₹6,000 / month</p>
+                            <p class="text-sm font-medium text-brand-primary">Budget: Rs 6,000 / month</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Wants to move in September</p>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -272,7 +400,7 @@ $thikanaUser = [
                         <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center font-bold text-lg shrink-0">A</div>
                         <div class="flex-1">
                             <h3 class="font-bold text-slate-900 dark:text-white">Aditya</h3>
-                            <p class="text-sm font-medium text-brand-primary">Budget: ₹5,500 / month</p>
+                            <p class="text-sm font-medium text-brand-primary">Budget: Rs 5,500 / month</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Wants to move in September</p>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -284,12 +412,58 @@ $thikanaUser = [
             </section>
 
             <section id="properties" class="page-section">
-                <div class="card flex flex-col items-center justify-center py-16 text-center">
-                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">🏠</div>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">My Properties</h2>
-                    <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-sm">Manage all your listed properties, update rent, and change availability status.</p>
-                    <button class="btn-primary" onclick="openModal('add-property-modal')">+ Add New Property</button>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">My Properties</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400"><?= $totalProperties ?> listed <?= $totalProperties === 1 ? 'property' : 'properties' ?> from your database.</p>
+                    </div>
+                    <button class="btn-primary" onclick="openModal('add-property-modal')">Add Property</button>
                 </div>
+
+                <?php if ($properties): ?>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <?php foreach ($properties as $property): ?>
+                    <?php $propertyPayload = json_encode($property, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
+                    <article class="card hover:border-brand-primary/50 transition-colors">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-sm font-extrabold shrink-0"><?= htmlspecialchars(thikana_property_icon($property['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                    <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$property['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
+                                    <span class="text-xs font-semibold <?= thikana_property_status_class((string) $property['status']) ?> px-2 py-1 rounded-md"><?= htmlspecialchars(ucfirst((string) $property['status']), ENT_QUOTES, 'UTF-8') ?></span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white truncate"><?= htmlspecialchars($property['property_name'], ENT_QUOTES, 'UTF-8') ?></h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2"><?= htmlspecialchars($property['address'] . ', ' . $property['city'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3 mt-5">
+                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
+                                <p class="text-lg font-bold text-slate-900 dark:text-white"><?= (int) $property['total_rooms'] ?></p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Rooms</p>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
+                                <p class="text-lg font-bold text-brand-primary"><?= (int) $property['available_rooms'] ?></p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Available</p>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
+                                <p class="text-lg font-bold text-green-600 dark:text-green-400"><?= htmlspecialchars(thikana_money($property['rent']), ENT_QUOTES, 'UTF-8') ?></p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Rent</p>
+                            </div>
+                        </div>
+
+                        <button class="mt-5 w-full btn-secondary" onclick='openEditProperty(<?= $propertyPayload ?>)'>Edit Property</button>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <div class="card flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">+</div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No properties found</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-sm">Add your first property and it will appear here immediately.</p>
+                    <button class="btn-primary" onclick="openModal('add-property-modal')">Add New Property</button>
+                </div>
+                <?php endif; ?>
             </section>
 
             <section id="seekers" class="page-section">
@@ -331,32 +505,56 @@ $thikanaUser = [
             </button>
         </div>
         <div class="p-6 overflow-y-auto">
-            <form onsubmit="event.preventDefault(); submitForm('add-property-modal', 'Property added successfully!');" class="space-y-4">
+            <form id="add-property-form" onsubmit="submitProperty(event, 'save_property')" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Name</label>
-                    <input type="text" placeholder="e.g. Sunrise PG" class="input-field" required>
+                    <input type="text" name="property_name" placeholder="e.g. Sunrise PG" class="input-field" required>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
-                        <select class="input-field" required>
-                            <option value="pg">PG / Hostel</option>
-                            <option value="flat">Flat / Apartment</option>
-                            <option value="room">Single Room</option>
+                        <select name="property_type" class="input-field" required>
+                            <?php foreach ($propertyTypes as $value => $label): ?>
+                            <option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Total Rooms</label>
-                        <input type="number" min="1" placeholder="e.g. 5" class="input-field" required>
+                        <input type="number" name="total_rooms" min="1" placeholder="e.g. 5" class="input-field" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Available Rooms</label>
+                        <input type="number" name="available_rooms" min="0" placeholder="e.g. 2" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
+                        <select name="status" class="input-field" required>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="draft">Draft</option>
+                        </select>
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Location Address</label>
-                    <textarea rows="2" placeholder="Enter full address" class="input-field" required></textarea>
+                    <textarea name="address" rows="2" placeholder="Enter full address" class="input-field" required></textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Expected Rent (₹ / Month)</label>
-                    <input type="number" placeholder="e.g. 5000" class="input-field" required>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                    <input type="text" name="city" placeholder="e.g. Phagwara" class="input-field" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Rent / Month</label>
+                        <input type="number" name="rent" min="0" step="0.01" placeholder="e.g. 5000" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Deposit</label>
+                        <input type="number" name="deposit" min="0" step="0.01" placeholder="e.g. 5000" class="input-field">
+                    </div>
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="closeModal('add-property-modal')" class="flex-1 btn-secondary">Cancel</button>
@@ -378,27 +576,57 @@ $thikanaUser = [
             </button>
         </div>
         <div class="p-6 overflow-y-auto">
-            <form onsubmit="event.preventDefault(); submitForm('edit-property-modal', 'Property updated successfully!');" class="space-y-4">
+            <form id="edit-property-form" onsubmit="submitProperty(event, 'update_property')" class="space-y-4">
+                <input type="hidden" name="property_id">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Name</label>
-                    <input type="text" value="Green View PG" class="input-field" required>
+                    <input type="text" name="property_name" class="input-field" required>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
-                        <select class="input-field">
-                            <option value="active" selected>Active</option>
-                            <option value="inactive">Inactive</option>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
+                        <select name="property_type" class="input-field" required>
+                            <?php foreach ($propertyTypes as $value => $label): ?>
+                            <option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Available Rooms</label>
-                        <input type="number" min="0" value="2" class="input-field" required>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
+                        <select name="status" class="input-field" required>
+                            <option value="active" selected>Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="draft">Draft</option>
+                        </select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Expected Rent (₹ / Month)</label>
-                    <input type="number" value="24000" class="input-field" required>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Location Address</label>
+                    <textarea name="address" rows="2" class="input-field" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                    <input type="text" name="city" class="input-field" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Total Rooms</label>
+                        <input type="number" name="total_rooms" min="1" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Available Rooms</label>
+                        <input type="number" name="available_rooms" min="0" class="input-field" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Rent / Month</label>
+                        <input type="number" name="rent" min="0" step="0.01" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Deposit</label>
+                        <input type="number" name="deposit" min="0" step="0.01" class="input-field">
+                    </div>
                 </div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="closeModal('edit-property-modal')" class="flex-1 btn-secondary">Cancel</button>
@@ -415,10 +643,10 @@ $thikanaUser = [
             <div class="w-20 h-20 mx-auto rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center font-bold text-3xl mb-4">R</div>
             <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Rahul Kumar</h3>
             <p class="text-brand-primary font-medium mb-4">Looking for: Single Room</p>
-            
+
             <div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-2 mb-6">
-                <p class="text-sm flex justify-between"><span class="text-slate-500">Budget:</span> <span class="font-bold dark:text-white">₹6,000 / month</span></p>
-                <p class="text-sm flex justify-between"><span class="text-slate-500">Move-in:</span> <span class="font-bold dark:text-white">Sept 15, 2024</span></p>
+                <p class="text-sm flex justify-between"><span class="text-slate-500">Budget:</span> <span class="font-bold dark:text-white">Rs 6,000 / month</span></p>
+                <p class="text-sm flex justify-between"><span class="text-slate-500">Move-in:</span> <span class="font-bold dark:text-white">Sept 15, 2026</span></p>
                 <p class="text-sm flex justify-between"><span class="text-slate-500">Profession:</span> <span class="font-bold dark:text-white">Student</span></p>
             </div>
 
@@ -520,6 +748,66 @@ $thikanaUser = [
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }, 300);
+    }
+
+    function formPayload(form, action) {
+        const formData = new FormData(form);
+        const payload = { action };
+        formData.forEach((value, key) => {
+            payload[key] = typeof value === 'string' ? value.trim() : value;
+        });
+        return payload;
+    }
+
+    async function submitProperty(event, action) {
+        event.preventDefault();
+        const form = event.target;
+        const button = form.querySelector('button[type="submit"]');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Saving...';
+
+        try {
+            const response = await fetch('dashboard_host.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formPayload(form, action))
+            });
+
+            const data = await response.json();
+            if (!response.ok || data.status !== 'success') {
+                throw new Error(data.message || 'Unable to save property.');
+            }
+
+            showToast(data.message || 'Property saved successfully!');
+            setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+            showToast(error.message || 'Unable to save property.');
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+
+    function setField(form, name, value) {
+        const field = form.elements[name];
+        if (field) {
+            field.value = value ?? '';
+        }
+    }
+
+    function openEditProperty(property) {
+        const form = document.getElementById('edit-property-form');
+        setField(form, 'property_id', property.id);
+        setField(form, 'property_name', property.property_name);
+        setField(form, 'property_type', property.property_type);
+        setField(form, 'status', property.status);
+        setField(form, 'address', property.address);
+        setField(form, 'city', property.city);
+        setField(form, 'total_rooms', property.total_rooms);
+        setField(form, 'available_rooms', property.available_rooms);
+        setField(form, 'rent', property.rent);
+        setField(form, 'deposit', property.deposit);
+        openModal('edit-property-modal');
     }
 
     // Handle form submit inside modals
