@@ -277,10 +277,6 @@ $thikanaUser = [
             </div>
 
             <div class="flex items-center gap-4">
-                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-brand-light dark:bg-indigo-900/30 text-brand-primary dark:text-indigo-300 rounded-full text-sm font-semibold border border-brand-primary/20 dark:border-indigo-500/30">
-                    <span class="w-2 h-2 rounded-full bg-brand-primary dark:bg-indigo-400 animate-pulse"></span>
-                    Budget Mode On
-                </div>
                 
                 <!-- Dark Mode Toggle -->
                 <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-transform hover:scale-105">
@@ -310,7 +306,7 @@ $thikanaUser = [
                         <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium mb-4 border border-white/20 shadow-sm">Welcome back!</span>
                         <h1 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight text-white drop-shadow-sm">
                             Hey <span id="welcome-firstname">User</span>, <br>
-                            <span class="text-brand-secondary drop-shadow-md">find a place</span> that fits your money.
+                            <span class="text-brand-secondary drop-shadow-md">Your Room. Your Vibe.</span> Your People.
                         </h1>
                     </div>
                     
