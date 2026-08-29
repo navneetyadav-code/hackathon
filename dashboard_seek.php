@@ -25,6 +25,11 @@ $fullName = trim(
 
 $displayName = $fullName ?: $firstName;
 $initial = strtoupper(substr($firstName, 0, 1));
+$thikanaUser = [
+    'firstName' => $firstName,
+    'lastName' => $_SESSION['last_name'] ?? '',
+    'email' => $_SESSION['email'] ?? ''
+];
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -99,6 +104,9 @@ $initial = strtoupper(substr($firstName, 0, 1));
         }
     </script>
 
+    <script>
+        window.thikanaUser = <?= json_encode($thikanaUser, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    </script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -242,7 +250,7 @@ $initial = strtoupper(substr($firstName, 0, 1));
 
         <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <div class="flex items-center gap-3 p-2 rounded-xl">
-                <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20">U</div>
+                <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div>
                 <div class="overflow-hidden">
                     <p id="sidebar-name" class="font-bold text-slate-900 dark:text-white text-sm truncate"><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></p>
                     <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Seeker Profile</p>
@@ -253,7 +261,6 @@ $initial = strtoupper(substr($firstName, 0, 1));
 
     <!-- Overlay for mobile sidebar -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
-
     <!-- Main Content -->
     <main class="flex-1 w-full flex flex-col transition-all duration-300 lg:ml-[280px]">
         

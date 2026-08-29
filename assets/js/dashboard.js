@@ -54,24 +54,34 @@
     // --- Data & State ---
     const sessionManager = {
         init() {
-            let user = sessionStorage.getItem('thikana_user');
+            const globalUser = window.thikanaUser || null;
+            let user = globalUser;
+
             if (!user) {
-                user = { firstName: 'Navneet', lastName: 'Yadav', email: 'guest@thikana.com' };
-                sessionStorage.setItem('thikana_user', JSON.stringify(user));
-            } else {
-                user = JSON.parse(user);
+                const storedUser = sessionStorage.getItem('thikana_user');
+                if (storedUser) {
+                    user = JSON.parse(storedUser);
+                }
             }
+
+            if (!user || !user.firstName) {
+                user = { firstName: 'User', lastName: '', email: '' };
+            }
+
+            sessionStorage.setItem('thikana_user', JSON.stringify(user));
             this.updateUI(user);
         },
         updateUI(user) {
-            const initial = user.firstName.charAt(0).toUpperCase();
+            const firstName = user.firstName || 'User';
+            const lastName = user.lastName || '';
+            const initial = firstName.charAt(0).toUpperCase();
             document.getElementById('sidebar-avatar').textContent = initial;
-            document.getElementById('sidebar-name').textContent = user.firstName + ' ' + user.lastName;
-            document.getElementById('welcome-firstname').textContent = user.firstName;
+            document.getElementById('sidebar-name').textContent = [firstName, lastName].filter(Boolean).join(' ');
+            document.getElementById('welcome-firstname').textContent = firstName;
         },
         logout() {
             sessionStorage.removeItem('thikana_user');
-            window.location.href = 'login.html'; // Adjust as needed
+            window.location.href = 'login.php';
         }
     };
 
