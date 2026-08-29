@@ -1,22 +1,249 @@
 <?php
 session_start();
-
-// User must be logged in
+require_once __DIR__ . '/config/app.php';
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// Seeker dashboard can only be accessed by seekers
-if (($_SESSION['role'] ?? '') !== 'seeker') {
-    if (($_SESSION['role'] ?? '') === 'host') {
-        require_once __DIR__ . '/config/config.php';
-        header('Location: ' . thikana_host_dashboard_redirect($_SESSION['user_id']));
+if (($_SESSION['role'] ?? '') !== 'host') {
+    header('Location: ' . (($_SESSION['role'] ?? '') === 'seeker' ? 'dashboard_seek.php' : 'login.php'));
+    exit;
+}
+
+$redirect = thikana_host_dashboard_redirect($_SESSION['user_id']);
+if ($redirect !== 'dashboard_host.php') {
+    header('Location: ' . $redirect);
+    exit;
+}
+
+$pdo = thikana_db();
+$propertyTypes = [
+    'pg' => 'PG / Hostel',
+    'flat' => 'Flat / Apartment',
+    'room' => 'Single Room',
+    'hostel' => 'Hostel'
+];
+$propertyStatuses = ['active', 'inactive', 'draft'];
+
+function thikana_money($amount): string
+{
+    return 'Rs ' . number_format((float) $amount, 0);
+}
+
+function thikana_property_status_class(string $status): string
+{
+    return $status === 'active'
+        ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
+        : 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800';
+}
+
+function thikana_property_icon(string $type): string
+{
+    return [
+        'pg' => 'PG',
+        'flat' => 'FL',
+        'room' => 'RM',
+        'hostel' => 'HS'
+    ][$type] ?? 'PR';
+}
+
+function thikana_handle_host_image_upload($file, int $userId): ?string
+{
+    if (!isset($file['name']) || !$file['name']) {
+        return null;
+    }
+
+    if (!is_array($file) || !isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return null;
+    }
+
+    $allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($file['tmp_name']);
+
+    if (!in_array($mimeType, $allowed, true)) {
+        throw new InvalidArgumentException('Only JPG, PNG, and WebP images are allowed.');
+    }
+
+    $uploadDir = __DIR__ . '/uploads/host_onboarding/';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('Unable to create upload directory.');
+    }
+
+    $safeFileName = 'host_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $targetPath = $uploadDir . $safeFileName;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        throw new RuntimeException('Failed to upload image.');
+    }
+
+    return '/uploads/host_onboarding/' . $safeFileName;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    if (!$pdo) {
+        echo json_encode(['status' => 'error', 'message' => 'Database connection is not available.']);
+        exit;
+    }
+
+    $payload = [];
+    $uploadedImage = null;
+
+    if (isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+        $payload = $_POST;
+        if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $uploadedImage = $_FILES['image'];
+        }
     } else {
-        header('Location: login.php');
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true);
+        $payload = is_array($input) ? $input : [];
+    }
+
+    $action = $payload['action'] ?? '';
+
+    try {
+        if ($action === 'save_property' || $action === 'update_property') {
+            $propertyName = trim((string) ($payload['property_name'] ?? ''));
+            $propertyType = trim((string) ($payload['property_type'] ?? ''));
+            $address = trim((string) ($payload['address'] ?? ''));
+            $city = trim((string) ($payload['city'] ?? ''));
+            $totalRooms = (int) ($payload['total_rooms'] ?? 0);
+            $availableRooms = (int) ($payload['available_rooms'] ?? 0);
+            $rent = (float) ($payload['rent'] ?? 0);
+            $deposit = (float) ($payload['deposit'] ?? 0);
+            $status = trim((string) ($payload['status'] ?? 'active'));
+            
+            // Handle array structures for JSON insertion
+            $amenitiesInput = trim((string) ($payload['amenities'] ?? ''));
+            $amenitiesArr = $amenitiesInput ? array_map('trim', explode(',', $amenitiesInput)) : [];
+            $amenitiesJson = !empty($amenitiesArr) ? json_encode($amenitiesArr) : null;
+
+            $rulesInput = trim((string) ($payload['house_rules'] ?? ''));
+            $rulesArr = $rulesInput ? array_map('trim', explode(',', $rulesInput)) : [];
+            $rulesJson = !empty($rulesArr) ? json_encode($rulesArr) : null;
+            
+            $imagePath = null;
+
+            if ($uploadedImage) {
+                $imagePath = thikana_handle_host_image_upload($uploadedImage, (int) $_SESSION['user_id']);
+            } elseif (!empty($payload['image_path'])) {
+                $imagePath = trim((string) $payload['image_path']);
+            }
+
+            if ($propertyName === '' || $address === '' || $city === '' || !array_key_exists($propertyType, $propertyTypes)) {
+                echo json_encode(['status' => 'error', 'message' => 'Please complete all required property details.']);
+                exit;
+            }
+
+            if ($totalRooms < 1 || $availableRooms < 0 || $availableRooms > $totalRooms || $rent < 0 || $deposit < 0 || !in_array($status, $propertyStatuses, true)) {
+                echo json_encode(['status' => 'error', 'message' => 'Please enter valid numbers and configurations.']);
+                exit;
+            }
+
+            if ($action === 'save_property') {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO properties (user_id, property_count, property_type, property_name, address, city, total_rooms, available_rooms, rent, deposit, amenities, house_rules, status, image_path, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                );
+                $stmt->execute([$_SESSION['user_id'], 'single', $propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $amenitiesJson, $rulesJson, $status, $imagePath]);
+
+                try {
+                    $checkHostOnboarding = $pdo->prepare('SELECT 1 FROM host_onboarding WHERE user_id = ? LIMIT 1');
+                    $checkHostOnboarding->execute([$_SESSION['user_id']]);
+                    if ($checkHostOnboarding->fetchColumn()) {
+                        $stmtHost = $pdo->prepare('UPDATE host_onboarding SET image_path = ? WHERE user_id = ?');
+                        $stmtHost->execute([$imagePath, $_SESSION['user_id']]);
+                    } else {
+                        $stmtHost = $pdo->prepare('INSERT INTO host_onboarding (user_id, image_path, created_at) VALUES (?, ?, NOW())');
+                        $stmtHost->execute([$_SESSION['user_id'], $imagePath]);
+                    }
+                } catch (Throwable $e) {
+                    error_log('Host onboarding image sync failed: ' . $e->getMessage());
+                }
+
+                echo json_encode(['status' => 'success', 'message' => 'Property added successfully!']);
+                exit;
+            }
+
+            $propertyId = (int) ($payload['property_id'] ?? 0);
+            if ($propertyId < 1) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid property selected.']);
+                exit;
+            }
+
+            if ($imagePath !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE properties
+                     SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, amenities = ?, house_rules = ?, status = ?, image_path = ?
+                     WHERE id = ? AND user_id = ?'
+                );
+                $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $amenitiesJson, $rulesJson, $status, $imagePath, $propertyId, $_SESSION['user_id']]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE properties
+                     SET property_type = ?, property_name = ?, address = ?, city = ?, total_rooms = ?, available_rooms = ?, rent = ?, deposit = ?, amenities = ?, house_rules = ?, status = ?
+                     WHERE id = ? AND user_id = ?'
+                );
+                $stmt->execute([$propertyType, $propertyName, $address, $city, $totalRooms, $availableRooms, $rent, $deposit, $amenitiesJson, $rulesJson, $status, $propertyId, $_SESSION['user_id']]);
+            }
+
+            echo json_encode([
+                'status' => $stmt->rowCount() >= 0 ? 'success' : 'error',
+                'message' => 'Property updated successfully!'
+            ]);
+            exit;
+        }
+
+        echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+    } catch (Throwable $e) {
+        error_log('Host dashboard property save failed: ' . $e->getMessage());
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
     exit;
 }
+
+$properties = [];
+$seekersList = [];
+
+if ($pdo) {
+    // 1. Fetch Real Properties
+    $stmt = $pdo->prepare('SELECT * FROM properties WHERE user_id = ? ORDER BY created_at DESC, id DESC');
+    $stmt->execute([$_SESSION['user_id']]);
+    $properties = $stmt->fetchAll();
+
+    $hostOnboardingImage = null;
+    try {
+        $hostImageStmt = $pdo->prepare('SELECT image_path FROM host_onboarding WHERE user_id = ? LIMIT 1');
+        $hostImageStmt->execute([$_SESSION['user_id']]);
+        $hostOnboardingImage = $hostImageStmt->fetchColumn();
+    } catch (Throwable $e) {}
+
+    foreach ($properties as &$property) {
+        if (empty($property['image_path']) && !empty($hostOnboardingImage)) {
+            $property['image_path'] = $hostOnboardingImage;
+        }
+    }
+    unset($property);
+
+    // 2. Fetch Real Seekers Dynamically 
+    try {
+        $seekerStmt = $pdo->query("SELECT id, first_name, last_name, email, phone, created_at FROM users WHERE role = 'seeker' ORDER BY created_at DESC LIMIT 20");
+        if ($seekerStmt) {
+            $seekersList = $seekerStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Throwable $e) {}
+}
+
+$featuredProperty = $properties[0] ?? null;
+$totalProperties = count($properties);
+$totalRooms = array_sum(array_map(fn($property) => (int) $property['total_rooms'], $properties));
+$availableRooms = array_sum(array_map(fn($property) => (int) $property['available_rooms'], $properties));
+$occupiedRooms = max(0, $totalRooms - $availableRooms);
+$monthlyRent = array_sum(array_map(fn($property) => (float) $property['rent'], $properties));
 
 $firstName = $_SESSION['first_name'] ?? 'User';
 $fullName = trim(
@@ -26,246 +253,120 @@ $fullName = trim(
 
 $displayName = $fullName ?: $firstName;
 $initial = strtoupper(substr($firstName, 0, 1));
-$thikanaUser = [
-    'firstName' => $firstName,
-    'lastName' => $_SESSION['last_name'] ?? '',
-    'email' => $_SESSION['email'] ?? ''
-];
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Thikana - Dashboard</title>
-    
-    <!-- Google Fonts -->
+    <title>Thikana - Host Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .glass-panel {
-                @apply bg-white/90 border border-slate-200 shadow-soft backdrop-blur-md dark:bg-slate-900/90 dark:border-slate-700/50;
-            }
-            .input-field {
-                @apply w-full p-3 py-3 px-4 rounded-xl border border-slate-200 bg-white text-slate-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:focus:ring-brand-primary/30;
-            }
-            .nav-btn {
-                @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 w-full text-left transition-all dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100;
-            }
-            .nav-btn.active {
-                @apply bg-brand-primary text-white font-semibold shadow-floating dark:bg-brand-primary;
-            }
-            .nav-btn svg {
-                color: currentColor;
-            }
-            .nav-btn.active svg {
-                color: #ffffff !important;
-            }
-            .nav-btn.active span {
-                color: #ffffff !important;
-            }
-        }
-
-        /* Range Slider */
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #4F46E5; cursor: pointer; margin-top: -8px; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #E2E8F0; border-radius: 999px; }
-        .dark input[type=range]::-webkit-slider-runnable-track { background: #334155; }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 4px; opacity: 0.5; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748B; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-        .dark ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-        /* Animations */
-        .page-section { display: none; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
-        .page-section.active { display: block; animation: fadeUp 0.4s forwards; }
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        
-        @keyframes slideInDown {
-            from { transform: translate(-50%, -100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-        .toast-enter { animation: slideInDown 0.3s ease-out forwards; }
-    </style>
-    <!-- Script to prevent Dark Mode flash on load -->
     <script>
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark')
         }
-    </script>
-
-    <script>
-        window.thikanaUser = <?= json_encode($thikanaUser, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    </script>
-    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            primary: '#4F46E5',    /* Indigo */
-                            hover: '#4338CA',
-                            secondary: '#F97316',  /* Warm Orange Accent */
-                            light: '#EEF2FF',
-                            dark: '#1E1B4B'
-                        }
+                        brand: { primary: '#4F46E5', hover: '#4338CA', secondary: '#F97316', light: '#EEF2FF', dark: '#1E1B4B' }
                     },
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-                        'floating': '0 10px 30px -5px rgba(79, 70, 229, 0.15)',
-                    }
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    boxShadow: { soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)', floating: '0 10px 30px -5px rgba(79, 70, 229, 0.15)' }
                 }
             }
         }
     </script>
-
     <style type="text/tailwindcss">
         @layer utilities {
-            .glass-panel {
-                @apply bg-white/90 border border-slate-200 shadow-soft backdrop-blur-md dark:bg-slate-900/90 dark:border-slate-700/50;
-            }
-            .input-field {
-                @apply w-full p-3 py-3 px-4 rounded-xl border border-slate-200 bg-white text-slate-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:focus:ring-brand-primary/30;
-            }
-            .nav-btn {
-                @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 w-full text-left transition-all dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100;
-            }
-            .nav-btn.active {
-                @apply bg-brand-primary text-white font-semibold shadow-floating dark:bg-brand-primary;
-            }
-            .nav-btn svg {
-                color: currentColor;
-            }
-            .nav-btn.active svg {
-                color: #ffffff !important;
-            }
-            .nav-btn.active span {
-                color: #ffffff !important;
-            }
+            .glass-panel { @apply bg-white/90 border border-slate-200 shadow-soft backdrop-blur-md dark:bg-slate-900/90 dark:border-slate-700/50; }
+            .nav-btn { @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 w-full text-left transition-all dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100; }
+            .nav-btn.active { @apply bg-brand-primary text-white font-semibold shadow-floating dark:bg-brand-primary; }
+            .nav-btn svg { color: currentColor; }
+            .nav-btn.active svg, .nav-btn.active span { color: #ffffff !important; }
+            .card { @apply bg-white border border-slate-200 rounded-2xl p-6 shadow-soft dark:bg-slate-900 dark:border-slate-800; }
+            .btn-primary { @apply px-5 py-2.5 bg-brand-primary hover:bg-brand-hover text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-floating; }
+            .btn-secondary { @apply px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300; }
+            .input-field { @apply w-full px-4 py-2 mt-1 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:focus:ring-brand-primary; }
         }
-
-        /* Range Slider */
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #4F46E5; cursor: pointer; margin-top: -8px; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #E2E8F0; border-radius: 999px; }
-        .dark input[type=range]::-webkit-slider-runnable-track { background: #334155; }
-
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 4px; opacity: 0.5; }
         ::-webkit-scrollbar-thumb:hover { background: #64748B; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
         .dark ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-        /* Animations */
         .page-section { display: none; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
         .page-section.active { display: block; animation: fadeUp 0.4s forwards; }
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        
-        @keyframes slideInDown {
-            from { transform: translate(-50%, -100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
+        @keyframes slideInDown { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
         .toast-enter { animation: slideInDown 0.3s ease-out forwards; }
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; transform: scale(0.95); opacity: 0; }
+        .modal-active .modal-content { transform: scale(1); opacity: 1; }
     </style>
 </head>
-
 <body class="bg-slate-50 text-slate-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
 
-<!-- Toast Notification Container -->
-<div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+<div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
 <div class="flex min-h-screen">
-    
-    <!-- Sidebar -->
     <aside id="sidebar" class="sidebar w-[280px] h-screen fixed left-0 top-0 z-40 transition-transform duration-300 bg-white border-r border-slate-200 flex flex-col shadow-soft dark:bg-slate-900 dark:border-slate-800 lg:translate-x-0 -translate-x-full">
         <div class="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
             <a href="#" class="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white group">
-                <svg class="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3zm0 2.5l5.5 4.95V18h-1v-6H7.5v6h-1v-7.55L12 5.5z"/>
-                    <path d="M12 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
-                </svg>
+                <svg class="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 Thikana
             </a>
-            <!-- Mobile close btn -->
             <button class="lg:hidden ml-auto text-slate-500 hover:text-brand-primary dark:text-slate-400" onclick="toggleSidebar()">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
         <nav class="flex-1 px-4 py-6 overflow-y-auto flex flex-col gap-2">
-            <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">Main Menu</p>
-            
-            <button class="nav-btn active" data-page="home" onclick="openPage('home', this)">
-                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">Host Menu</p>
+            <button class="nav-btn active" data-page="dashboard" onclick="openPage('dashboard', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                 <span>Dashboard</span>
             </button>
-            
-            <button class="nav-btn" data-page="explore" onclick="openPage('explore', this)">
-                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <span>Explore Stays</span>
+            <button class="nav-btn" data-page="properties" onclick="openPage('properties', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                <span>My Properties</span>
             </button>
-            
-            <button class="nav-btn" data-page="matcher" onclick="openPage('matcher', this)">
-                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
-                <span>Smart Match</span>
+            <button class="nav-btn" data-page="seekers" onclick="openPage('seekers', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <span>Seekers</span>
             </button>
-            
-            <button class="nav-btn" data-page="calculator" onclick="openPage('calculator', this)">
-                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                <span>Split & Budget</span>
-            </button>
-            
             <button class="nav-btn" data-page="messages" onclick="openPage('messages', this)">
                 <div class="relative">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-brand-secondary rounded-full border-2 border-white dark:border-slate-900"></span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                 </div>
                 <span>Messages</span>
             </button>
-
-            <div class="mt-8">
-                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">Account</p>
-                <button class="nav-btn hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" onclick="sessionManager.logout()">
-                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    <span>Logout</span>
-                </button>
-            </div>
+            <button class="nav-btn" data-page="settings" onclick="openPage('settings', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>Settings</span>
+            </button>
         </nav>
 
         <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <div class="flex items-center gap-3 p-2 rounded-xl">
-                <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20"><?= htmlspecialchars($initial) ?></div>
                 <div class="overflow-hidden">
-                    <p id="sidebar-name" class="font-bold text-slate-900 dark:text-white text-sm truncate"><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Seeker Profile</p>
+                    <p class="font-bold text-slate-900 dark:text-white text-sm truncate"> <?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Property Owner</p>
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- Overlay for mobile sidebar -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
-    <!-- Main Content -->
+
     <main class="flex-1 w-full flex flex-col transition-all duration-300 lg:ml-[280px]">
-        
-        <!-- Topbar -->
         <header class="sticky top-0 z-30 h-20 px-6 flex items-center justify-between bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
             <div class="flex items-center gap-4">
                 <button class="lg:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onclick="toggleSidebar()">
@@ -273,432 +374,639 @@ $thikanaUser = [
                 </button>
                 <div class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
                     <svg class="w-4 h-4 text-brand-secondary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                    <span id="current-location">Phagwara,Punjab</span>
+                    <span>Dashboard View</span>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-                
-                <!-- Dark Mode Toggle -->
                 <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-transform hover:scale-105">
-                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
                 </button>
-                
-                <button class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm relative transition-transform hover:scale-105">
+                <button class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm relative transition-transform hover:scale-105" onclick="showToast('Your recent activity is up to date!')">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                    <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
             </div>
         </header>
 
-        <!-- Page Containers -->
         <div class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
-            
-            <!-- Dashboard Home -->
-            <section id="home" class="page-section active">
-                
-                <!-- Fixed Hero Panel using standard Tailwind utilities -->
-                <div class="bg-gradient-to-br from-slate-900 to-indigo-600 dark:from-slate-900 dark:to-brand-primary rounded-3xl p-8 md:p-10 mb-8 shadow-floating text-white flex flex-col md:flex-row justify-between items-start md:items-end gap-8 relative overflow-hidden">
-                    <!-- Decorative circle -->
+            <section id="dashboard" class="page-section active">
+                <div class="bg-gradient-to-br from-slate-900 to-indigo-600 dark:from-slate-900 dark:to-brand-primary rounded-3xl p-8 md:p-10 mb-8 shadow-floating text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-                    
-                    <div class="max-w-2xl relative z-10">
-                        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium mb-4 border border-white/20 shadow-sm">Welcome back!</span>
-                        <h1 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight text-white drop-shadow-sm">
-                            Hey <span id="welcome-firstname"><?= htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') ?></span>, <br>
-                            <span class="text-brand-secondary drop-shadow-md text-lg md:text-2xl font-semibold leading-snug">Your Room. Your Vibe. Your People.</span>
-                        </h1>
+                    <div class="relative z-10">
+                        <h1 class="text-3xl md:text-5xl font-extrabold mb-2 leading-tight text-white drop-shadow-sm">Hey <?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?>👋</h1>
+                        <p class="text-indigo-100 text-lg">Here's what's happening with your property portfolio.</p>
                     </div>
+                    <button class="relative z-10 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-slate-50 transition-all shadow-lg hover:shadow-xl flex items-center gap-2" onclick="openModal('add-property-modal')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Property
+                    </button>
                 </div>
 
-                <div class="grid lg:grid-cols-3 gap-8 mb-8">
-                    <!-- Quick Actions -->
-                    <div class="lg:col-span-2 grid sm:grid-cols-2 gap-4">
-                        <button class="glass-panel p-6 rounded-2xl text-left hover:-translate-y-1 transition-all group" onclick="openPage('matcher')">
-                            <div class="w-12 h-12 bg-brand-light dark:bg-indigo-900/40 text-brand-primary dark:text-indigo-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
-                            </div>
-                            <h3 class="font-bold text-lg mb-1 group-hover:text-brand-primary dark:group-hover:text-indigo-400">Run Smart Match</h3>
-                            <p class="text-slate-500 dark:text-slate-400 text-sm">Compare specific properties with your monthly income.</p>
-                        </button>
+                <div class="card mb-8 hover:border-brand-primary/50 transition-colors">
+                    <?php if ($featuredProperty): ?>
+                    <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                        <?php if (!empty($featuredProperty['image_path'])): ?>
+                            <img src="<?= htmlspecialchars($featuredProperty['image_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Property Image" class="w-20 h-20 rounded-2xl object-cover border border-slate-200 dark:border-slate-700">
+                        <?php else: ?>
+                            <div class="w-20 h-20 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-xl font-extrabold"><?= htmlspecialchars(thikana_property_icon($featuredProperty['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
                         
-                        <button class="glass-panel p-6 rounded-2xl text-left hover:-translate-y-1 transition-all group" onclick="openPage('calculator')">
-                            <div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-brand-secondary dark:text-orange-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <div class="flex-1 cursor-pointer" onclick='openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                            <div class="flex flex-wrap items-center gap-3 mb-2">
+                                <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$featuredProperty['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
+                                <span class="flex items-center gap-1 text-xs font-medium <?= thikana_property_status_class((string) $featuredProperty['status']) ?> px-2 py-1 rounded-md">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span> <?= htmlspecialchars(ucfirst((string) $featuredProperty['status']), ENT_QUOTES, 'UTF-8') ?>
+                                </span>
                             </div>
-                            <h3 class="font-bold text-lg mb-1 group-hover:text-brand-secondary dark:group-hover:text-orange-400">Calculate Split</h3>
-                            <p class="text-slate-500 dark:text-slate-400 text-sm">Figure out equal or custom roommate splits easily.</p>
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1"><?= htmlspecialchars($featuredProperty['property_name'], ENT_QUOTES, 'UTF-8') ?></h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <?= htmlspecialchars($featuredProperty['address'] . ', ' . $featuredProperty['city'], ENT_QUOTES, 'UTF-8') ?>
+                            </p>
+                        </div>
+                        <button class="btn-secondary w-full md:w-auto whitespace-nowrap flex items-center justify-center gap-2" onclick='openPage("properties", document.querySelector("[data-page=\"properties\"]")); openEditProperty(<?= json_encode($featuredProperty, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                            Manage Property
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </button>
                     </div>
+                    <?php else: ?>
+                    <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                        <div class="w-16 h-16 rounded-2xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-3xl">+</div>
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">No properties yet</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Add your first room, PG, flat, or hostel to start managing your authentic listings.</p>
+                        </div>
+                        <button class="btn-primary w-full md:w-auto" onclick="openModal('add-property-modal')">Add Property</button>
+                    </div>
+                    <?php endif; ?>
 
-                    <!-- Next Best Action -->
-                    <div class="glass-panel rounded-2xl p-6 flex flex-col">
-                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-brand-primary dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            Priority Task
-                        </h3>
-                        <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex-1 flex flex-col justify-center">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-semibold text-slate-900 dark:text-slate-200">Host replied</span>
-                                <span class="text-xs text-brand-primary dark:text-indigo-300 font-bold bg-brand-light dark:bg-indigo-900/50 px-2 py-1 rounded">New</span>
-                            </div>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Meera from Green View PG just responded to your query.</p>
-                            <button class="mt-auto w-full py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-hover transition-colors" onclick="openPage('messages')">
-                                View Message
-                            </button>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white"><?= $totalRooms ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Rooms</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                            <p class="text-2xl font-bold text-brand-primary"><?= $availableRooms ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Available</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white"><?= $occupiedRooms ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Occupied</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                            <p class="text-2xl font-bold text-green-600 dark:text-green-400"><?= htmlspecialchars(thikana_money($monthlyRent), ENT_QUOTES, 'UTF-8') ?></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Listed Rent / Month</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recommended Listings -->
-                <div class="flex justify-between items-end mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold">Recommended for you</h2>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm">Based on your budget and location.</p>
-                    </div>
-                    <button class="text-brand-primary dark:text-indigo-400 font-semibold hover:text-brand-hover dark:hover:text-indigo-300 flex items-center gap-1" onclick="openPage('explore')">
-                        View all <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <button class="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-md transition-all text-left" onclick="openModal('add-property-modal')">
+                        <div class="w-12 h-12 rounded-full bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-xl">➕</div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-sm">Add Property</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">List a new room, PG or flat.</p>
+                        </div>
                     </button>
+                    <button class="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-md transition-all text-left" onclick="openPage('properties', document.querySelector('[data-page=properties]'))">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center text-xl">🛏️</div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-sm">Manage Rooms</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Update availability and rent.</p>
+                        </div>
+                    </button>
+                    <button class="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-md transition-all text-left" onclick="openPage('seekers', document.querySelector('[data-page=seekers]'))">
+                        <div class="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-500 flex items-center justify-center text-xl">👥</div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white text-sm">View Seekers</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">See interested people.</p>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Recent Seeker Profiles</h2>
+                    <button class="text-sm font-medium text-brand-primary hover:text-brand-hover" onclick="openPage('seekers', document.querySelector('[data-page=seekers]'))">View all →</button>
                 </div>
                 
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="home-listings">
-                    <!-- Listings injected by JS -->
-                </div>
-            </section>
-
-            <!-- Explore Page -->
-            <section id="explore" class="page-section">
-                <div class="mb-8">
-                    <h1 class="text-3xl font-extrabold mb-2">Explore Stays</h1>
-                    <p class="text-slate-500 dark:text-slate-400">Search by area, budget and room type without leaving the dashboard.</p>
-                </div>
-
-                <div class="glass-panel p-4 md:p-6 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-end">
-                    <div class="flex-1 w-full">
-                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Search Location or Name</label>
-                        <div class="relative">
-                            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            <input type="text" id="listing-search" class="input-field pl-10" placeholder="e.g., Koramangala, PG..." oninput="renderListings('explore-listings')">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+                    <?php if (!empty($seekersList)): ?>
+                        <?php foreach(array_slice($seekersList, 0, 4) as $seekerInfo): ?>
+                            <?php 
+                            $sInit = strtoupper(substr($seekerInfo['first_name'], 0, 1)); 
+                            $sName = trim($seekerInfo['first_name'] . ' ' . $seekerInfo['last_name']);
+                            ?>
+                            <div class="card flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-brand-primary/50 transition-colors">
+                                <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center font-bold text-lg shrink-0"><?= htmlspecialchars($sInit) ?></div>
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-slate-900 dark:text-white"><?= htmlspecialchars($sName) ?></h3>
+                                    <p class="text-sm font-medium text-brand-primary">Looking for Accommodation</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Joined: <?= date('M d, Y', strtotime($seekerInfo['created_at'])) ?></p>
+                                </div>
+                                <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                    <button class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition-colors" onclick='openSeekerModal(<?= json_encode($seekerInfo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>View</button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="col-span-1 lg:col-span-2 card text-center py-8 text-slate-500 dark:text-slate-400">
+                            No active seekers found in the database recently.
                         </div>
-                    </div>
-                    <div class="w-full md:w-48">
-                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Max Budget</label>
-                        <select id="budget-filter" class="input-field" onchange="renderListings('explore-listings')">
-                            <option value="all">Any budget</option>
-                            <option value="6500">Under ₹6,500</option>
-                            <option value="8000">Under ₹8,000</option>
-                            <option value="10000">Under ₹10,000</option>
-                        </select>
-                    </div>
-                    <div class="w-full md:w-48">
-                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Room Type</label>
-                        <select id="type-filter" class="input-field" onchange="renderListings('explore-listings')">
-                            <option value="all">Any type</option>
-                            <option value="shared">Shared Room</option>
-                            <option value="private">Private Room</option>
-                        </select>
-                    </div>
-                    <button class="w-full md:w-auto bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-hover shadow-md transition-all" onclick="renderListings('explore-listings')">
-                        Filter
-                    </button>
-                </div>
-
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="explore-listings">
-                    <!-- Listings injected by JS -->
+                    <?php endif; ?>
                 </div>
             </section>
 
-            <!-- Matcher Page -->
-            <section id="matcher" class="page-section">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+            <section id="properties" class="page-section">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div>
-                        <h1 class="text-3xl font-extrabold mb-2">Smart Property Match</h1>
-                        <p class="text-slate-500 dark:text-slate-400">Analyze a property share against your income.</p>
+                        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">My Properties</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400"><?= $totalProperties ?> listed <?= $totalProperties === 1 ? 'property' : 'properties' ?> populated directly from your database.</p>
                     </div>
-                    <button class="bg-white dark:bg-slate-800 border-2 border-brand-primary dark:border-indigo-500 text-brand-primary dark:text-indigo-400 px-5 py-2.5 rounded-xl font-bold hover:bg-brand-light dark:hover:bg-slate-700 transition-colors" onclick="openPage('calculator')">
-                        Open Full Budget
-                    </button>
+                    <button class="btn-primary" onclick="openModal('add-property-modal')">Add Property</button>
                 </div>
 
-                <div class="grid lg:grid-cols-2 gap-8">
-                    <!-- Property Card -->
-                    <div class="glass-panel rounded-3xl overflow-hidden flex flex-col">
-                        <div class="h-64 relative">
-                            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80" alt="Apartment" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
-                            <div class="absolute bottom-4 left-6 text-white">
-                                <span class="bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded mb-2 inline-block">3BHK Apartment</span>
-                                <h2 class="text-2xl font-bold">Premium Downtown Flat</h2>
-                                <p class="text-slate-200 text-sm flex items-center gap-1 mt-1">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                    Koramangala, Sector 3
-                                </p>
-                            </div>
-                            <div class="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-extrabold shadow-sm" id="base-rent" data-value="24000">
-                                ₹24,000 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/mo total</span>
-                            </div>
-                        </div>
-                        <div class="p-6 flex-1 bg-white dark:bg-slate-800">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="font-bold text-lg dark:text-white">Current Residents</h3>
-                                    <p class="text-sm text-slate-500 dark:text-slate-400">Looking for 1 more person</p>
-                                </div>
-                                <div class="flex -space-x-3">
-                                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-blue-700 dark:text-blue-300">R</div>
-                                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-green-700 dark:text-green-300">P</div>
-                                    <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300">A</div>
-                                    <div id="avatar-you" class="w-10 h-10 rounded-full bg-brand-primary border-2 border-white dark:border-slate-800 items-center justify-center font-bold text-white text-xs hidden">You</div>
+                <?php if ($properties): ?>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <?php foreach ($properties as $property): ?>
+                    <?php $propertyPayload = json_encode($property, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
+                    <article class="card hover:border-brand-primary/50 transition-colors flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-start gap-4 mb-4">
+                                <?php if (!empty($property['image_path'])): ?>
+                                    <img src="<?= htmlspecialchars($property['image_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Property Image" class="w-16 h-16 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700">
+                                <?php else: ?>
+                                    <div class="w-16 h-16 rounded-xl bg-brand-light dark:bg-indigo-900/40 text-brand-primary flex items-center justify-center text-xl font-extrabold shrink-0"><?= htmlspecialchars(thikana_property_icon($property['property_type']), ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php endif; ?>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <span class="text-xs font-bold text-brand-primary uppercase tracking-wider px-2 py-1 bg-brand-light dark:bg-indigo-900/30 rounded-md"><?= htmlspecialchars($propertyTypes[$property['property_type']] ?? 'Property', ENT_QUOTES, 'UTF-8') ?></span>
+                                        <span class="text-xs font-semibold <?= thikana_property_status_class((string) $property['status']) ?> px-2 py-1 rounded-md"><?= htmlspecialchars(ucfirst((string) $property['status']), ENT_QUOTES, 'UTF-8') ?></span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white truncate"><?= htmlspecialchars($property['property_name'], ENT_QUOTES, 'UTF-8') ?></h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2"><?= htmlspecialchars($property['address'] . ', ' . $property['city'], ENT_QUOTES, 'UTF-8') ?></p>
                                 </div>
                             </div>
-                            <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
-                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Fully furnished shared spaces</li>
-                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> High-speed Wi-Fi setup</li>
-                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 1.5km from main tech park</li>
-                            </ul>
+
+                            <?php 
+                            $amenitiesArr = json_decode($property['amenities'] ?? '[]', true) ?: []; 
+                            if (!empty($amenitiesArr)): ?>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    <?php foreach(array_slice($amenitiesArr, 0, 4) as $am): ?>
+                                        <span class="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700"><?= htmlspecialchars($am) ?></span>
+                                    <?php endforeach; ?>
+                                    <?php if(count($amenitiesArr) > 4): ?>
+                                        <span class="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">+<?= count($amenitiesArr) - 4 ?> more</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
+
+                        <div>
+                            <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                    <p class="text-lg font-bold text-slate-900 dark:text-white"><?= (int) $property['total_rooms'] ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Total Rooms</p>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                    <p class="text-lg font-bold text-brand-primary"><?= (int) $property['available_rooms'] ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Available</p>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
+                                    <p class="text-lg font-bold text-green-600 dark:text-green-400"><?= htmlspecialchars(thikana_money($property['rent']), ENT_QUOTES, 'UTF-8') ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Mo. Rent</p>
+                                </div>
+                            </div>
+                            <button class="mt-4 w-full btn-secondary" onclick='openEditProperty(<?= $propertyPayload ?>)'>Edit Details & Configuration</button>
+                        </div>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <div class="card flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">+</div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No properties found</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-sm">Add your first real property listing and it will appear here immediately from the database.</p>
+                    <button class="btn-primary" onclick="openModal('add-property-modal')">Add New Property</button>
+                </div>
+                <?php endif; ?>
+            </section>
+
+            <section id="seekers" class="page-section">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">Active Seekers List</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Review real profiles of people looking for a place from your user base.</p>
                     </div>
+                </div>
 
-                    <!-- Controls -->
-                    <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col justify-center">
-                        <h3 class="font-bold text-xl mb-6">Analyze Your Fit</h3>
-                        
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">Which room are you taking?</label>
-                            <div class="bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex">
-                                <button id="btn-standard" class="flex-1 py-2 text-center rounded-lg font-semibold bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm transition-all" onclick="setRoomType('standard')">Standard (Smaller)</button>
-                                <button id="btn-master" class="flex-1 py-2 text-center rounded-lg font-medium text-slate-500 dark:text-slate-400 transition-all" onclick="setRoomType('master')">Master (Ensuite)</button>
+                <?php if (!empty($seekersList)): ?>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <?php foreach($seekersList as $seekerInfo): ?>
+                            <?php 
+                            $sInit = strtoupper(substr($seekerInfo['first_name'], 0, 1)); 
+                            $sName = trim($seekerInfo['first_name'] . ' ' . $seekerInfo['last_name']);
+                            ?>
+                            <div class="card flex flex-col items-center text-center hover:border-brand-primary/50 transition-colors">
+                                <div class="w-16 h-16 rounded-full bg-brand-light dark:bg-indigo-900/30 text-brand-primary flex items-center justify-center font-bold text-2xl mb-4"><?= htmlspecialchars($sInit) ?></div>
+                                <h3 class="font-bold text-lg text-slate-900 dark:text-white"><?= htmlspecialchars($sName) ?></h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4"><?= htmlspecialchars($seekerInfo['email']) ?></p>
+                                <button class="btn-secondary w-full" onclick='openSeekerModal(<?= json_encode($seekerInfo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>View Profile</button>
                             </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <div class="flex justify-between text-sm font-semibold mb-3">
-                                <span>Est. total flat utilities</span>
-                                <span id="utility-val" class="text-brand-primary dark:text-indigo-400">₹3,000</span>
-                            </div>
-                            <input type="range" id="utility-slider" min="0" max="10000" step="500" value="3000" oninput="updateUtility(this.value)">
-                            <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
-                                <span>₹0</span><span>₹10k</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Your Monthly Income (₹)</label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                <input type="number" id="user-income" class="input-field pl-8 font-semibold text-lg" placeholder="e.g. 45000" min="0">
-                            </div>
-                        </div>
-
-                        <button class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold shadow-lg shadow-brand-primary/30 hover:bg-brand-hover hover:-translate-y-0.5 transition-all" onclick="analyzeMatch()">
-                            Calculate My Share
-                        </button>
-
-                        <!-- Results -->
-                        <div id="match-result-box" class="mt-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hidden">
-                            <div class="flex justify-between items-end mb-4">
-                                <div>
-                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Your Est. Share</p>
-                                    <h2 id="share-amount" class="text-3xl font-extrabold text-slate-900 dark:text-white">₹0</h2>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Income Used</p>
-                                    <h2 id="percentage-used" class="text-2xl font-bold text-slate-900 dark:text-white">0%</h2>
-                                </div>
-                            </div>
-                            
-                            <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full mb-3 overflow-hidden">
-                                <div id="meter-bar" class="h-full rounded-full transition-all duration-500 w-0"></div>
-                            </div>
-                            
-                            <p id="breakdown-info" class="text-xs text-slate-500 dark:text-slate-400 text-center mb-4"></p>
-                            <div id="status-text" class="text-sm font-bold p-3 rounded-lg text-center"></div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
+                <?php else: ?>
+                    <div class="card flex flex-col items-center justify-center py-16 text-center">
+                        <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">👥</div>
+                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No Seekers Available</h2>
+                        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-sm">When new seekers register in the system, they will automatically appear here populated from the database.</p>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section id="messages" class="page-section">
+                <div class="card flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">💬</div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Messages</h2>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-sm">Message center for chatting with potential roommates and seekers.</p>
                 </div>
             </section>
 
-            <!-- Calculator Page -->
-            <section id="calculator" class="page-section">
-                <div class="mb-8 max-w-3xl">
-                    <h1 class="text-3xl font-extrabold mb-2">Split & Budget Calculator</h1>
-                    <p class="text-slate-500 dark:text-slate-400">Figure out fair roommate splits and verify affordability for any property.</p>
-                </div>
-
-                <div class="grid lg:grid-cols-5 gap-8 items-start">
-                    
-                    <!-- Form -->
-                    <div class="lg:col-span-3 glass-panel rounded-3xl p-6 md:p-8">
-                        <form onsubmit="calculateSplit(event)">
-                            
-                            <!-- Section 1 -->
-                            <div class="mb-8">
-                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">1. Housing Costs</h2>
-                                <div class="grid sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Rent (₹)</label>
-                                        <input type="number" id="calc-rent" class="input-field" placeholder="e.g. 20000" required min="0">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Utilities (₹)</label>
-                                        <input type="number" id="calc-util" class="input-field" placeholder="e.g. 2000" value="0" min="0">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Roommates</label>
-                                        <input type="number" id="calc-roommates" class="input-field" value="2" min="1" required oninput="renderCustomSplitFields()">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Split Strategy</label>
-                                        <select id="calc-split-mode" class="input-field" onchange="renderCustomSplitFields()">
-                                            <option value="equal">Equal Split</option>
-                                            <option value="custom">Custom (By Room)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div id="calc-custom-split" class="grid sm:grid-cols-2 gap-4 mt-4 hidden"></div>
-                            </div>
-
-                            <!-- Section 2 -->
-                            <div class="mb-8">
-                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">2. Your Financials</h2>
-                                <div class="grid sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Monthly Income (₹)</label>
-                                        <input type="number" id="calc-income" class="input-field" placeholder="e.g. 50000" min="0">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Max Rent Target (%)</label>
-                                        <input type="number" id="calc-percent" class="input-field" placeholder="Usually 30%" value="30" min="1" max="100">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 3 -->
-                            <div class="mb-8">
-                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">3. Estimated Expenses (Optional)</h2>
-                                <div class="grid sm:grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Food/Groceries</label><input type="number" id="calc-food" class="input-field" value="0" min="0"></div>
-                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Travel</label><input type="number" id="calc-travel" class="input-field" value="0" min="0"></div>
-                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Personal/Other</label><input type="number" id="calc-other" class="input-field" value="0" min="0"></div>
-                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Savings Goal</label><input type="number" id="calc-savings" class="input-field" value="0" min="0"></div>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold hover:bg-brand-hover transition-colors">
-                                Generate Budget Report
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Results Panel -->
-                    <div class="lg:col-span-2">
-                        <div id="calc-results" class="sticky top-28 hidden">
-                            <!-- Injected by JS -->
-                        </div>
-                        
-                        <!-- Empty State -->
-                        <div id="calc-empty" class="glass-panel rounded-3xl p-8 text-center flex flex-col items-center justify-center h-full min-h-[400px]">
-                            <div class="w-16 h-16 bg-brand-light dark:bg-slate-800 rounded-full flex items-center justify-center text-brand-primary dark:text-indigo-400 mb-4">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            </div>
-                            <h3 class="font-bold text-lg mb-2 dark:text-white">Awaiting Data</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Fill out the form and generate your report to see a detailed breakdown of your split and budget health.</p>
-                        </div>
-                    </div>
-
+            <section id="settings" class="page-section">
+                <div class="card flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-4">⚙️</div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Settings</h2>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-sm">Update your host profile and notification preferences.</p>
                 </div>
             </section>
-
-            <!-- Messages Page -->
-            <section id="messages" class="page-section h-[calc(100vh-140px)] min-h-[500px]">
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl h-full flex overflow-hidden shadow-soft">
-                    
-                    <!-- Sidebar List -->
-                    <div class="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col" id="conv-sidebar">
-                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                            <h2 class="text-xl font-bold mb-4 dark:text-white">Messages</h2>
-                            <div class="relative">
-                                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                <input type="text" class="input-field pl-9 py-2 text-sm" placeholder="Search chats...">
-                            </div>
-                        </div>
-                        <div class="flex-1 overflow-y-auto p-2" id="conversation-list">
-                            <!-- Convos injected by JS -->
-                        </div>
-                    </div>
-
-                    <!-- Chat Area -->
-                    <div class="flex-1 flex flex-col hidden md:flex" id="chat-area">
-                        <!-- Header -->
-                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur">
-                            <div class="flex items-center gap-3">
-                                <button class="md:hidden p-2 text-slate-500 dark:text-slate-400" onclick="toggleChatMobile()">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                                </button>
-                                <div id="chat-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/40 text-brand-primary dark:text-indigo-400 flex items-center justify-center font-bold">G</div>
-                                <div>
-                                    <strong id="chat-title" class="block leading-tight text-slate-900 dark:text-white">Green View PG</strong>
-                                    <span id="chat-subtitle" class="text-xs text-slate-500 dark:text-slate-400">Host: Meera</span>
-                                </div>
-                            </div>
-                            <button class="text-xs font-bold text-brand-primary dark:text-indigo-300 bg-brand-light dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-brand-primary hover:text-white transition-colors border border-brand-primary/20 dark:border-indigo-500/30" onclick="openPage('matcher')">
-                                Check Match
-                            </button>
-                        </div>
-                        
-                        <!-- Messages -->
-                        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-white dark:bg-slate-900" id="chat-messages">
-                            <!-- Messages injected by JS -->
-                        </div>
-                        
-                        <!-- Input -->
-                        <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                            <form class="flex gap-2" onsubmit="sendMessage(event)">
-                                <input id="message-input" type="text" class="input-field flex-1" placeholder="Type your message..." required autocomplete="off">
-                                <button type="submit" class="w-12 h-12 bg-brand-primary text-white rounded-xl flex items-center justify-center hover:bg-brand-hover transition-colors shadow-md">
-                                    <svg class="w-5 h-5 -ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
         </div>
     </main>
 </div>
 
-<!-- Mobile Bottom Nav -->
-<nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around p-2 z-40 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="home" onclick="openPage('home')">
-        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-        <span class="text-[10px] font-medium">Home</span>
-    </button>
-    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="explore" onclick="openPage('explore')">
-        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <span class="text-[10px] font-medium">Explore</span>
-    </button>
-    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="matcher" onclick="openPage('matcher')">
-        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
-        <span class="text-[10px] font-medium">Match</span>
-    </button>
-    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="calculator" onclick="openPage('calculator')">
-         <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-        <span class="text-[10px] font-medium">Budget</span>
-    </button>
-    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400 relative" data-page="messages" onclick="openPage('messages')">
-        <div class="relative">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-            <span class="absolute top-0 -right-1 w-2.5 h-2.5 bg-brand-secondary rounded-full border-2 border-white dark:border-slate-900"></span>
+<!-- Add Property Modal -->
+<div id="add-property-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center modal-overlay">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 modal-content mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>➕</span> Add New Property Entry
+            </h3>
+            <button onclick="closeModal('add-property-modal')" class="text-slate-400 hover:text-red-500 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
-        <span class="text-[10px] font-medium">Chat</span>
-    </button>
-</nav>
-<style> @supports (padding-bottom: env(safe-area-inset-bottom)) { .pb-safe { padding-bottom: env(safe-area-inset-bottom); } } </style>
+        <div class="p-6 overflow-y-auto">
+            <form id="add-property-form" onsubmit="submitProperty(event, 'save_property')" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Name</label>
+                        <input type="text" name="property_name" placeholder="e.g. Sunrise PG, Royal Flats" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Type</label>
+                        <select name="property_type" class="input-field" required>
+                            <?php foreach ($propertyTypes as $value => $label): ?>
+                            <option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Publishing Status</label>
+                        <select name="status" class="input-field" required>
+                            <option value="active">Active (Visible to Seekers)</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="draft">Draft Mode</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Full Address</label>
+                        <textarea name="address" rows="2" placeholder="Enter complete location address" class="input-field" required></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                        <input type="text" name="city" placeholder="e.g. Phagwara, Amritsar" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Total Rooms</label>
+                        <input type="number" name="total_rooms" min="1" placeholder="e.g. 10" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Available Rooms</label>
+                        <input type="number" name="available_rooms" min="0" placeholder="e.g. 4" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Rent (Rs)</label>
+                        <input type="number" name="rent" min="0" step="0.01" placeholder="e.g. 5000" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Security Deposit (Rs)</label>
+                        <input type="number" name="deposit" min="0" step="0.01" placeholder="e.g. 5000" class="input-field">
+                    </div>
+                    <div class="md:col-span-2 border-t border-slate-200 dark:border-slate-800 pt-4 mt-2">
+                        <h4 class="text-sm font-bold text-slate-900 dark:text-white mb-3">Additional Details (Stored as JSON structure)</h4>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Amenities (comma separated)</label>
+                        <input type="text" name="amenities" placeholder="e.g. WiFi, AC, Geyser, Laundry, RO Water" class="input-field mb-4">
+                        
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">House Rules (comma separated)</label>
+                        <input type="text" name="house_rules" placeholder="e.g. No smoking, Curfew 10PM, No pets" class="input-field">
+                    </div>
+                </div>
+                
+                <div class="pt-6 flex gap-3">
+                    <button type="button" onclick="closeModal('add-property-modal')" class="flex-1 btn-secondary py-3">Cancel</button>
+                    <button type="submit" class="flex-1 btn-primary py-3 text-lg">Save Property Listing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
+<!-- Edit Property Modal -->
+<div id="edit-property-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center modal-overlay">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 modal-content mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>✏️</span> Update Property Details
+            </h3>
+            <button onclick="closeModal('edit-property-modal')" class="text-slate-400 hover:text-red-500 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto">
+            <form id="edit-property-form" onsubmit="submitProperty(event, 'update_property')" class="space-y-5">
+                <input type="hidden" name="property_id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Name</label>
+                        <input type="text" name="property_name" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Type</label>
+                        <select name="property_type" class="input-field" required>
+                            <?php foreach ($propertyTypes as $value => $label): ?>
+                            <option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Publishing Status</label>
+                        <select name="status" class="input-field" required>
+                            <option value="active">Active (Visible to Seekers)</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="draft">Draft Mode</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Full Address</label>
+                        <textarea name="address" rows="2" class="input-field" required></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                        <input type="text" name="city" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Total Rooms</label>
+                        <input type="number" name="total_rooms" min="1" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Available Rooms</label>
+                        <input type="number" name="available_rooms" min="0" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Rent (Rs)</label>
+                        <input type="number" name="rent" min="0" step="0.01" class="input-field" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Security Deposit (Rs)</label>
+                        <input type="number" name="deposit" min="0" step="0.01" class="input-field">
+                    </div>
+                    
+                    <div class="md:col-span-2 border-t border-slate-200 dark:border-slate-800 pt-4 mt-2">
+                        <h4 class="text-sm font-bold text-slate-900 dark:text-white mb-3">Additional Details (JSON structure)</h4>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Amenities (comma separated)</label>
+                        <input type="text" name="amenities" class="input-field mb-4">
+                        
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">House Rules (comma separated)</label>
+                        <input type="text" name="house_rules" class="input-field">
+                    </div>
+                </div>
+                <div class="pt-6 flex gap-3">
+                    <button type="button" onclick="closeModal('edit-property-modal')" class="flex-1 btn-secondary py-3">Cancel</button>
+                    <button type="submit" class="flex-1 btn-primary py-3 text-lg">Update All Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-<!-- Scripts -->
-<script src="assets/js/dashboard.js"></script>
+<!-- View Seeker Real Data Modal -->
+<div id="view-seeker-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center modal-overlay">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800 modal-content mx-4 overflow-hidden">
+        <div class="p-6 text-center">
+            <div id="modal-seeker-init" class="w-20 h-20 mx-auto rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center font-bold text-3xl mb-4"></div>
+            <h3 id="modal-seeker-name" class="text-2xl font-bold text-slate-900 dark:text-white"></h3>
+            <p class="text-brand-primary font-medium mb-4">Verified Seeker from Database</p>
+
+            <div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-2 mb-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <p class="text-sm flex flex-col"><span class="text-slate-500 text-xs uppercase tracking-wide font-bold">Email Address:</span> <span id="modal-seeker-email" class="font-bold dark:text-white truncate"></span></p>
+                <div class="h-px bg-slate-200 dark:bg-slate-700 my-1"></div>
+                <p class="text-sm flex flex-col"><span class="text-slate-500 text-xs uppercase tracking-wide font-bold">Phone Number:</span> <span id="modal-seeker-phone" class="font-bold dark:text-white"></span></p>
+                <div class="h-px bg-slate-200 dark:bg-slate-700 my-1"></div>
+                <p class="text-sm flex flex-col"><span class="text-slate-500 text-xs uppercase tracking-wide font-bold">Registration Date:</span> <span id="modal-seeker-date" class="font-bold dark:text-white"></span></p>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('view-seeker-modal')" class="flex-1 btn-secondary">Close Window</button>
+                <a id="modal-seeker-contact" href="#" class="flex-1 btn-primary bg-indigo-600 flex items-center justify-center gap-2 text-center shadow-md">Send Email</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        themeToggleLightIcon.classList.remove('hidden');
+    } else {
+        themeToggleDarkIcon.classList.remove('hidden');
+    }
+
+    themeToggleBtn.addEventListener('click', function() {
+        themeToggleDarkIcon.classList.toggle('hidden');
+        themeToggleLightIcon.classList.toggle('hidden');
+        if (localStorage.getItem('color-theme')) {
+            if (localStorage.getItem('color-theme') === 'light') {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            }
+        } else {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        }
+    });
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    function openPage(pageId, btnElement) {
+        document.querySelectorAll('.page-section').forEach(el => {
+            el.classList.remove('active');
+        });
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(pageId).classList.add('active');
+        if(btnElement) {
+            btnElement.classList.add('active');
+        } else {
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+        }
+        if(window.innerWidth < 1024 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
+            toggleSidebar();
+        }
+    }
+
+    function showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'glass-panel px-6 py-3 rounded-xl flex items-center gap-3 font-medium text-sm text-slate-800 dark:text-white toast-enter border-l-4 border-l-brand-primary';
+        toast.innerHTML = `<svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translate(-50%, -100%)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.add('modal-active');
+        }, 10);
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('modal-active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+
+    function formPayload(form, action) {
+        const formData = new FormData(form);
+        const payload = { action };
+        formData.forEach((value, key) => {
+            payload[key] = typeof value === 'string' ? value.trim() : value;
+        });
+        return payload;
+    }
+
+    async function submitProperty(event, action) {
+        event.preventDefault();
+        const form = event.target;
+        const button = form.querySelector('button[type="submit"]');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Saving Listing...';
+
+        try {
+            const response = await fetch('dashboard_host.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formPayload(form, action))
+            });
+
+            const data = await response.json();
+            if (!response.ok || data.status !== 'success') {
+                throw new Error(data.message || 'Unable to save property entry.');
+            }
+
+            showToast(data.message || 'Property saved successfully!');
+            setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+            showToast(error.message || 'Unable to complete your request.');
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+
+    function setField(form, name, value) {
+        const field = form.elements[name];
+        if (field) {
+            field.value = value ?? '';
+        }
+    }
+
+    function openEditProperty(property) {
+        const form = document.getElementById('edit-property-form');
+        setField(form, 'property_id', property.id);
+        setField(form, 'property_name', property.property_name);
+        setField(form, 'property_type', property.property_type);
+        setField(form, 'status', property.status);
+        setField(form, 'address', property.address);
+        setField(form, 'city', property.city);
+        setField(form, 'total_rooms', property.total_rooms);
+        setField(form, 'available_rooms', property.available_rooms);
+        setField(form, 'rent', property.rent);
+        setField(form, 'deposit', property.deposit);
+        
+        // Render JSON Amenities & Rules into comma separated strings for editing
+        let amenitiesStr = '';
+        try { if(property.amenities) amenitiesStr = JSON.parse(property.amenities).join(', '); } catch(e){}
+        setField(form, 'amenities', amenitiesStr);
+        
+        let rulesStr = '';
+        try { if(property.house_rules) rulesStr = JSON.parse(property.house_rules).join(', '); } catch(e){}
+        setField(form, 'house_rules', rulesStr);
+        
+        openModal('edit-property-modal');
+    }
+
+    function openSeekerModal(seeker) {
+        const initial = seeker.first_name ? seeker.first_name.charAt(0).toUpperCase() : '?';
+        document.getElementById('modal-seeker-init').textContent = initial;
+        
+        const fullName = (seeker.first_name || '') + ' ' + (seeker.last_name || '');
+        document.getElementById('modal-seeker-name').textContent = fullName.trim() || 'Unknown User';
+        
+        document.getElementById('modal-seeker-email').textContent = seeker.email || 'Not Available';
+        document.getElementById('modal-seeker-phone').textContent = seeker.phone || 'No phone provided';
+        
+        const dateOpt = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('modal-seeker-date').textContent = seeker.created_at ? new Date(seeker.created_at).toLocaleDateString('en-US', dateOpt) : 'Unknown Date';
+        
+        const contactBtn = document.getElementById('modal-seeker-contact');
+        if(seeker.email) {
+            contactBtn.href = "mailto:" + seeker.email;
+            contactBtn.style.display = "flex";
+        } else {
+            contactBtn.style.display = "none";
+        }
+        
+        openModal('view-seeker-modal');
+    }
+</script>
+
 </body>
 </html>
