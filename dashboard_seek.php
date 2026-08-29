@@ -10,7 +10,8 @@ if (!isset($_SESSION['user_id'])) {
 // Seeker dashboard can only be accessed by seekers
 if (($_SESSION['role'] ?? '') !== 'seeker') {
     if (($_SESSION['role'] ?? '') === 'host') {
-        header('Location: dashboard_host.php');
+        require_once __DIR__ . '/config/config.php';
+        header('Location: ' . thikana_host_dashboard_redirect($_SESSION['user_id']));
     } else {
         header('Location: login.php');
     }

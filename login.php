@@ -6,7 +6,7 @@ require_once 'config/config.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_SESSION['user_id'])) {
 
     if (($_SESSION['role'] ?? '') === 'host') {
-        header('Location: dashboard_host.php');
+        header('Location: ' . thikana_host_dashboard_redirect($_SESSION['user_id']));
         exit;
     }
 
@@ -90,19 +90,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Verify user exists and password matches
             if ($user && password_verify($password, $user['password'])) {
-                // Regenerate session ID to prevent session fixation attacks
                 session_regenerate_id(true);
 
-                // Set secure session data
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['first_name'] = $user['first_name'];
                 $_SESSION['last_name'] = $user['last_name'];
                 $_SESSION['email'] = $user['email'];
-                
-                // Role-Based Access Control routing
-                $redirect = ($user['role'] === 'host') ? 'dashboard_host.php' : 'dashboard_seek.php';
-                
+
+                if (($user['role'] ?? '') === 'host') {
+                    $redirect = ((int)($user['onboarding_complete'] ?? 0) === 1)
+                        ? 'dashboard_host.php'
+                        : 'host_onboarding.php';
+                } else {
+                    $redirect = 'dashboard_seek.php';
+                }
+
                 echo json_encode(['status' => 'success', 'message' => 'Login successful!', 'redirect' => $redirect]);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);

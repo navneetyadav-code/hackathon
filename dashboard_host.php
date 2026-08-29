@@ -1,19 +1,20 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/config.php';
 
-// User must be logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// Seeker dashboard can only be accessed by seekers
 if (($_SESSION['role'] ?? '') !== 'host') {
-    if (($_SESSION['role'] ?? '') === 'seekers') {
-        header('Location: dashboard_seek.php');
-    } else {
-        header('Location: login.php');
-    }
+    header('Location: ' . (($_SESSION['role'] ?? '') === 'seeker' ? 'dashboard_seek.php' : 'login.php'));
+    exit;
+}
+
+$redirect = thikana_host_dashboard_redirect($_SESSION['user_id']);
+if ($redirect !== 'dashboard_host.php') {
+    header('Location: ' . $redirect);
     exit;
 }
 
@@ -154,7 +155,7 @@ $thikanaUser = [
                 </button>
                 <div class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
                     <svg class="w-4 h-4 text-brand-secondary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                    <span>Your Location</span>
+                    <span>Phagwara,Punjab</span>
                 </div>
             </div>
 
