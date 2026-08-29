@@ -175,7 +175,7 @@ $thikanaUser = [
                 <div class="bg-gradient-to-br from-slate-900 to-indigo-600 dark:from-slate-900 dark:to-brand-primary rounded-3xl p-8 md:p-10 mb-8 shadow-floating text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
                     <div class="relative z-10">
-                        <h1 class="text-3xl md:text-5xl font-extrabold mb-2 leading-tight text-white drop-shadow-sm">Hey👋</h1>
+                        <h1 class="text-3xl md:text-5xl font-extrabold mb-2 leading-tight text-white drop-shadow-sm">Hey<?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?>👋</h1>
                         <p class="text-indigo-100 text-lg">Here's what's happening with your property.</p>
                     </div>
                     <button class="relative z-10 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-slate-50 transition-all shadow-lg hover:shadow-xl flex items-center gap-2" onclick="openModal('add-property-modal')">
