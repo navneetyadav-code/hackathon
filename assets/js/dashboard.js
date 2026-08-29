@@ -72,12 +72,15 @@
             this.updateUI(user);
         },
         updateUI(user) {
-            const firstName = user.firstName || 'User';
-            const lastName = user.lastName || '';
-            const initial = firstName.charAt(0).toUpperCase();
+            const firstName = (user.firstName || 'User').trim();
+            const lastName = (user.lastName || '').trim();
+            const initial = (firstName.charAt(0) || 'U').toUpperCase();
             document.getElementById('sidebar-avatar').textContent = initial;
             document.getElementById('sidebar-name').textContent = [firstName, lastName].filter(Boolean).join(' ');
-            document.getElementById('welcome-firstname').textContent = firstName;
+            const welcomeName = document.getElementById('welcome-firstname');
+            if (welcomeName) {
+                welcomeName.textContent = firstName;
+            }
         },
         logout() {
             sessionStorage.removeItem('thikana_user');
