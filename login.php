@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config.php';
+require_once '<config>config.php';
 
 // Handle Backend API Requests (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
