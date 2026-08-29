@@ -306,7 +306,7 @@ $thikanaUser = [
                         <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium mb-4 border border-white/20 shadow-sm">Welcome back!</span>
                         <h1 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight text-white drop-shadow-sm">
                             Hey <span id="welcome-firstname">User</span>, <br>
-                            <span class="text-brand-secondary drop-shadow-md">Your Room. Your Vibe.</span> Your People.
+                            <span class="text-brand-secondary drop-shadow-md">Your Room. Your Vibe. Your People.</span>
                         </h1>
                     </div>
                     
