@@ -1,19 +1,14 @@
 <?php
 session_start();
-require_once config/config.php;
+require_once __DIR__ . '/config/config.php';
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-if (($_SESSION['role'] ?? '') !== 'host') {
-    header('Location: ' . (($_SESSION['role'] ?? '') === 'seeker' ? 'dashboard_seek.php' : 'login.php'));
-    exit;
-}
-
-$redirect = thikana_host_dashboard_redirect($_SESSION['user_id']);
-if ($redirect !== 'dashboard_host.php') {
-    header('Location: ' . $redirect);
+if (($_SESSION['role'] ?? '') !== 'seeker') {
+    header('Location: dashboard_host.php');
     exit;
 }
 
