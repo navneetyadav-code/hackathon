@@ -2,6 +2,24 @@
 session_start();
 require_once 'config/config.php';
 
+// Already logged in? Send user to their dashboard.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_SESSION['user_id'])) {
+
+    if (($_SESSION['role'] ?? '') === 'host') {
+        header('Location: dashboard_host.php');
+        exit;
+    }
+
+    if (($_SESSION['role'] ?? '') === 'seeker') {
+        header('Location: dashboard_seek.php');
+        exit;
+    }
+
+    // Invalid session
+    session_unset();
+    session_destroy();
+}
+
 // Handle Backend API Requests (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
@@ -79,6 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['first_name'] = $user['first_name'];
+                $_SESSION['last_name'] = $user['last_name'];
+                $_SESSION['email'] = $user['email'];
                 
                 // Role-Based Access Control routing
                 $redirect = ($user['role'] === 'host') ? 'dashboard_host.php' : 'dashboard_seek.php';

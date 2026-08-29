@@ -1,3 +1,31 @@
+<?php
+session_start();
+
+// User must be logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+// Seeker dashboard can only be accessed by seekers
+if (($_SESSION['role'] ?? '') !== 'seeker') {
+    if (($_SESSION['role'] ?? '') === 'host') {
+        header('Location: dashboard_host.php');
+    } else {
+        header('Location: login.php');
+    }
+    exit;
+}
+
+$firstName = $_SESSION['first_name'] ?? 'User';
+$fullName = trim(
+    ($_SESSION['first_name'] ?? '') . ' ' .
+    ($_SESSION['last_name'] ?? '')
+);
+
+$displayName = $fullName ?: $firstName;
+$initial = strtoupper(substr($firstName, 0, 1));
+?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -216,7 +244,7 @@
             <div class="flex items-center gap-3 p-2 rounded-xl">
                 <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20">U</div>
                 <div class="overflow-hidden">
-                    <p id="sidebar-name" class="font-bold text-slate-900 dark:text-white text-sm truncate">User Name</p>
+                    <p id="sidebar-name" class="font-bold text-slate-900 dark:text-white text-sm truncate"><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></p>
                     <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Seeker Profile</p>
                 </div>
             </div>
