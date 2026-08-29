@@ -239,15 +239,15 @@ function handleAuth(e, action) {
     // Simulated network delay for the prototype
     setTimeout(() => {
         if(action === 'login') {
-            const email = document.getElementById('logEmail').value;
-            const password = document.getElementById('logPassword').value;
+            const email = document.getElementById('logEmail').value.trim();
+            const password = document.getElementById('logPassword').value.trim();
 
-            // Hardcoded prototype authentication check
-            if (email === 'navneetyadav982008@gmail.com' && password === 'Kumar@6202') {
+            // Prototype mode: allow any valid non-empty credentials
+            if (email && password) {
                 showAlert(alertId, 'Login successful! Redirecting to dashboard...', 'success');
                 setTimeout(() => window.location.href = 'dashboard.html', 1500); 
             } else {
-                showAlert(alertId, 'Invalid email or password. Please try again.', 'error');
+                showAlert(alertId, 'Please enter both email and password.', 'error');
             }
         } else if (action === 'signup') {
             // Simulated successful signup
