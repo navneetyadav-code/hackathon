@@ -1,506 +1,1159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seeker Dashboard - Thikana</title>
-
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-body { background: #F5F7FB; color: #172033; min-height: 100vh; }
-.app { display: flex; min-height: 100vh; }
-
-/* SIDEBAR */
-.sidebar { width: 240px; height: 100vh; background: #102A43; color: white; position: fixed; left: 0; top: 0; padding: 30px 18px; display: flex; flex-direction: column; z-index: 10; }
-.logo { font-size: 25px; font-weight: bold; margin-bottom: 45px; padding-left: 12px; color: white; }
-.logo span { color: #93C5FD; }
-.nav { display: flex; flex-direction: column; gap: 8px; }
-.nav-item { background: transparent; border: none; width: 100%; font-size: 16px; text-align: left; font-family: inherit; padding: 14px 15px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px; color: #CBD5E1; transition: 0.2s; }
-.nav-item:hover { background: #1D3B5A; color: white; }
-.nav-item.active { background: #2563EB; color: white; }
-.nav-icon { font-size: 20px; }
-.sidebar-bottom { margin-top: auto; border-top: 1px solid #28445F; padding-top: 20px; }
-.user-mini { display: flex; align-items: center; gap: 10px; }
-.user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #D9E2EC; color: #102A43; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-
-/* MAIN */
-.main { margin-left: 240px; width: calc(100% - 240px); min-height: 100vh; }
-.topbar { height: 80px; background: white; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; padding: 0 45px; }
-.location { color: #64748B; font-size: 14px; font-weight: bold; }
-.top-right { display: flex; align-items: center; gap: 25px; }
-.notification { font-size: 22px; cursor: pointer; }
-
-/* PAGE */
-.page { display: none; padding: 40px 50px; max-width: 1400px; margin: auto; }
-.page.active { display: block; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.page-title { font-size: 32px; margin-bottom: 8px; }
-.page-subtitle { color: #64748B; margin-bottom: 30px; }
-.search-box { width: 100%; padding: 17px 20px; background: white; border: 1px solid #D9E2EC; border-radius: 12px; font-size: 15px; outline: none; margin-bottom: 30px; }
-.search-box:focus { border-color: #2563EB; }
-
-/* CARDS */
-.feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
-.feature-card { padding: 30px; border-radius: 18px; min-height: 190px; display: flex; flex-direction: column; justify-content: space-between; }
-.dark-card { background: #102A43; color: white; }
-.dark-card p { color: #CBD5E1; }
-.green-card { background: #EFF6FF; color: #102A43; }
-.green-card p { color: #64748B; }
-.btn { width: fit-content; padding: 11px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-.btn:hover { opacity: 0.9; }
-.dark-card .btn { background: white; color: #102A43; }
-.green-card .btn { background: #2563EB; color: white; }
-
-/* CALCULATOR TOOL */
-.calc-container { background: white; padding: 30px; border-radius: 18px; border: 1px solid #E2E8F0; max-width: 700px; }
-.input-group { margin-bottom: 20px; }
-.input-group label { display: block; font-size: 14px; font-weight: bold; color: #172033; margin-bottom: 8px; }
-.input-group input { width: 100%; padding: 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; }
-.input-group select { width: 100%; padding: 14px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; background: white; }
-.input-group input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.input-group select:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.btn-calc { background: #2563EB; color: white; width: 100%; padding: 15px; border-radius: 10px; font-size: 16px; margin-top: 10px; }
-.result-box { margin-top: 25px; display: none; }
-.alert-success { background: #ECFDF5; color: #065F46; padding: 15px; border-radius: 10px; border: 1px solid #A7F3D0; margin-bottom: 10px; }
-.alert-warning { background: #FFFBEB; color: #92400E; padding: 15px; border-radius: 10px; border: 1px solid #FDE68A; margin-bottom: 10px; }
-.alert-error { background: #FEF2F2; color: #991B1B; padding: 15px; border-radius: 10px; border: 1px solid #FECACA; margin-bottom: 10px; }
-.result-stat { font-size: 24px; font-weight: bold; margin: 10px 0; }
-.custom-split-grid { display: none; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
-.score-meter { height: 10px; background: #E2E8F0; border-radius: 999px; overflow: hidden; margin-top: 12px; }
-.score-meter span { display: block; height: 100%; border-radius: 999px; background: #16A34A; }
-
-/* LISTINGS */
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-.section-header h2 { font-size: 21px; }
-.listing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.listing { background: white; border: 1px solid #E2E8F0; border-radius: 15px; overflow: hidden; transition: 0.2s; }
-.listing:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(16, 42, 67, 0.08); }
-.listing-image { height: 150px; background: #EAF2FB; display: flex; align-items: center; justify-content: center; font-size: 45px; }
-.listing-content { padding: 18px; }
-.listing h3 { margin-bottom: 8px; }
-.price { font-size: 19px; font-weight: bold; color: #102A43; margin-bottom: 8px; }
-.details { color: #64748B; font-size: 14px; line-height: 1.6; }
-.listing .btn { margin-top: 15px; background: #2563EB; color: white; }
-
-/* MOBILE */
-.mobile-nav { display: none; }
-
-@media (max-width: 900px) {
-    .sidebar { width: 200px; }
-    .main { margin-left: 200px; width: calc(100% - 200px); }
-    .feature-grid { grid-template-columns: 1fr; }
-    .page { padding: 30px; }
-    .calc-row { grid-template-columns: 1fr; gap: 0; }
-}
-
-@media (max-width: 650px) {
-    .sidebar { display: none; }
-    .main { margin-left: 0; width: 100%; }
-    .topbar { padding: 0 20px; height: 65px; }
-    .page { padding: 25px 18px 100px; }
-    .page-title { font-size: 26px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thikana - Dashboard</title>
     
-    .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: white; border-top: 1px solid #E2E8F0; justify-content: space-around; align-items: center; z-index: 100; }
-    .mobile-nav .nav-item { padding: 7px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
-}
-</style>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Script to prevent Dark Mode flash on load -->
+    <script>
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            primary: '#4F46E5',    /* Indigo */
+                            hover: '#4338CA',
+                            secondary: '#F97316',  /* Warm Orange Accent */
+                            light: '#EEF2FF',
+                            dark: '#1E1B4B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'floating': '0 10px 30px -5px rgba(79, 70, 229, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-white/90 border border-slate-200 shadow-soft backdrop-blur-md dark:bg-slate-900/90 dark:border-slate-700/50;
+            }
+            .input-field {
+                @apply w-full p-3 py-3 px-4 rounded-xl border border-slate-200 bg-white text-slate-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:focus:ring-brand-primary/30;
+            }
+            .nav-btn {
+                @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 w-full text-left transition-all dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100;
+            }
+            .nav-btn.active {
+                @apply bg-brand-primary text-white font-semibold shadow-floating dark:bg-brand-primary;
+            }
+            .nav-btn svg {
+                color: currentColor;
+            }
+            .nav-btn.active svg {
+                color: #ffffff !important;
+            }
+            .nav-btn.active span {
+                color: #ffffff !important;
+            }
+        }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #4F46E5; cursor: pointer; margin-top: -8px; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #E2E8F0; border-radius: 999px; }
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #334155; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 4px; opacity: 0.5; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748B; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        /* Animations */
+        .page-section { display: none; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .page-section.active { display: block; animation: fadeUp 0.4s forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes slideInDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        .toast-enter { animation: slideInDown 0.3s ease-out forwards; }
+    </style>
 </head>
 
-<body>
+<body class="bg-slate-50 text-slate-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
 
-<div class="app">
+<!-- Toast Notification Container -->
+<div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
-<aside class="sidebar">
-    <div class="logo">Thikana<span>.</span></div>
-    <div class="nav">
-        <button class="nav-item active" onclick="openPage('home', this)">
-            <div class="nav-icon">🏠</div><div>Home</div>
-        </button>
-        <button class="nav-item" onclick="openPage('explore', this)">
-            <div class="nav-icon">🔍</div><div>Explore</div>
-        </button>
-        <button class="nav-item" onclick="openPage('calculator', this)">
-            <div class="nav-icon">🧮</div><div>Split & Budget</div>
-        </button>
-        <button class="nav-item" onclick="sessionManager.logout()">
-            <div class="nav-icon">🚪</div><div>Logout</div>
-        </button>
-    </div>
-
-    <div class="sidebar-bottom">
-        <div class="user-mini">
-            <div class="user-avatar" id="sidebar-avatar">U</div>
-            <div>
-                <b id="sidebar-name">User Name</b>
-                <div class="details">Seeker</div>
-            </div>
-        </div>
-    </div>
-</aside>
-
-<main class="main">
-<header class="topbar">
-    <div class="location" id="current-location">📍 Getting Location...</div>
-    <div class="top-right">
-        <div class="notification">🔔</div>
-    </div>
-</header>
-
-<section id="home" class="page active">
-    <h1 class="page-title">Hey <span id="welcome-firstname">User</span> 👋</h1>
-    <p class="page-subtitle">Find a place that fits your budget.</p>
-
-    <input class="search-box" type="text" placeholder="🔍 Search area, PG, hostel or flat...">
-
-    <div class="feature-grid">
-        <div class="feature-card dark-card">
-            <div>
-                <h2>🏠 Find Your Place</h2>
-                <p>Find rooms, PGs, hostels and flats near you.</p>
-            </div>
-            <button class="btn" onclick="openPage('explore')">Explore Rooms →</button>
-        </div>
-        <div class="feature-card green-card">
-            <div>
-                <h2>🧮 Budget Check</h2>
-                <p>Split rent fairly and check if it fits your income.</p>
-            </div>
-            <button class="btn" onclick="openPage('calculator')">Open Calculator →</button>
-        </div>
-    </div>
-
-    <div class="section-header">
-        <h2>⭐ Recommended for you</h2>
-    </div>
-    <div class="listing-grid" id="home-listings"></div>
-</section>
-
-<section id="explore" class="page">
-    <h1 class="page-title">🔍 Explore</h1>
-    <p class="page-subtitle">Find your next place.</p>
-    <div class="listing-grid" id="explore-listings"></div>
-</section>
-
-<section id="calculator" class="page">
-    <h1 class="page-title">🧮 Split & Budget Calculator</h1>
-    <p class="page-subtitle">Figure out fair roommate splits and verify affordability.</p>
+<div class="flex min-h-screen">
     
-    <div class="calc-container">
-        <form onsubmit="calculateSplit(event)">
-            
-            <div class="section-header" style="margin-bottom: 10px;"><h3>Housing Costs</h3></div>
-            <div class="calc-row">
-                <div class="input-group">
-                    <label>Total Monthly Rent (₹)</label>
-                    <input type="number" id="calc-rent" placeholder="e.g. 15000" required min="0">
-                </div>
-                <div class="input-group">
-                    <label>Estimated Utilities/Extras (₹)</label>
-                    <input type="number" id="calc-util" placeholder="e.g. 2000" value="0" min="0">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Number of Roommates (including you)</label>
-                <input type="number" id="calc-roommates" placeholder="e.g. 3" value="1" min="1" required oninput="renderCustomSplitFields()">
-            </div>
-
-            <div class="input-group">
-                <label>Split Mode</label>
-                <select id="calc-split-mode" onchange="renderCustomSplitFields()">
-                    <option value="equal">Equal Split</option>
-                    <option value="custom">Custom Split</option>
-                </select>
-            </div>
-
-            <div id="calc-custom-split" class="custom-split-grid"></div>
-
-            <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 25px 0;">
-            
-            <div class="section-header" style="margin-bottom: 10px;"><h3>Affordability Check (Optional)</h3></div>
-            <div class="calc-row">
-                <div class="input-group">
-                    <label>Your Monthly Income (₹)</label>
-                    <input type="number" id="calc-income" placeholder="e.g. 40000" min="0">
-                </div>
-                <div class="input-group">
-                    <label>Max Income % for Rent</label>
-                    <input type="number" id="calc-percent" placeholder="Standard is 30%" value="30" min="1" max="100">
-                </div>
-            </div>
-
-            <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 25px 0;">
-
-            <div class="section-header" style="margin-bottom: 10px;"><h3>Monthly Expenses (Optional)</h3></div>
-            <div class="calc-row">
-                <div class="input-group">
-                    <label>Food & Groceries (₹)</label>
-                    <input type="number" id="calc-food" placeholder="e.g. 6000" value="0" min="0">
-                </div>
-                <div class="input-group">
-                    <label>Travel & Commute (₹)</label>
-                    <input type="number" id="calc-travel" placeholder="e.g. 2500" value="0" min="0">
-                </div>
-                <div class="input-group">
-                    <label>Personal/Other Expenses (₹)</label>
-                    <input type="number" id="calc-other" placeholder="e.g. 4000" value="0" min="0">
-                </div>
-                <div class="input-group">
-                    <label>Monthly Savings Goal (₹)</label>
-                    <input type="number" id="calc-savings" placeholder="e.g. 8000" value="0" min="0">
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-calc">Calculate Split</button>
-        </form>
-
-        <div id="calc-results" class="result-box">
-            <!-- Results injected here via JS -->
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar w-[280px] h-screen fixed left-0 top-0 z-40 transition-transform duration-300 bg-white border-r border-slate-200 flex flex-col shadow-soft dark:bg-slate-900 dark:border-slate-800 lg:translate-x-0 -translate-x-full">
+        <div class="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
+            <a href="#" class="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white group">
+                <svg class="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                    <path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3zm0 2.5l5.5 4.95V18h-1v-6H7.5v6h-1v-7.55L12 5.5z"/>
+                    <path d="M12 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                </svg>
+                Thikana
+            </a>
+            <!-- Mobile close btn -->
+            <button class="lg:hidden ml-auto text-slate-500 hover:text-brand-primary dark:text-slate-400" onclick="toggleSidebar()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
-    </div>
-</section>
 
-</main>
+        <nav class="flex-1 px-4 py-6 overflow-y-auto flex flex-col gap-2">
+            <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">Main Menu</p>
+            
+            <button class="nav-btn active" data-page="home" onclick="openPage('home', this)">
+                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>Dashboard</span>
+            </button>
+            
+            <button class="nav-btn" data-page="explore" onclick="openPage('explore', this)">
+                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <span>Explore Stays</span>
+            </button>
+            
+            <button class="nav-btn" data-page="matcher" onclick="openPage('matcher', this)">
+                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                <span>Smart Match</span>
+            </button>
+            
+            <button class="nav-btn" data-page="calculator" onclick="openPage('calculator', this)">
+                <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                <span>Split & Budget</span>
+            </button>
+            
+            <button class="nav-btn" data-page="messages" onclick="openPage('messages', this)">
+                <div class="relative">
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-brand-secondary rounded-full border-2 border-white dark:border-slate-900"></span>
+                </div>
+                <span>Messages</span>
+            </button>
+
+            <div class="mt-8">
+                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">Account</p>
+                <button class="nav-btn hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" onclick="sessionManager.logout()">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+            <div class="flex items-center gap-3 p-2 rounded-xl">
+                <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/50 text-brand-primary dark:text-indigo-300 flex items-center justify-center font-bold text-lg border border-brand-primary/20">U</div>
+                <div class="overflow-hidden">
+                    <p id="sidebar-name" class="font-bold text-slate-900 dark:text-white text-sm truncate">User Name</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Seeker Profile</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full flex flex-col transition-all duration-300 lg:ml-[280px]">
+        
+        <!-- Topbar -->
+        <header class="sticky top-0 z-30 h-20 px-6 flex items-center justify-between bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onclick="toggleSidebar()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <svg class="w-4 h-4 text-brand-secondary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                    <span id="current-location">Phagwara,Punjab</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-brand-light dark:bg-indigo-900/30 text-brand-primary dark:text-indigo-300 rounded-full text-sm font-semibold border border-brand-primary/20 dark:border-indigo-500/30">
+                    <span class="w-2 h-2 rounded-full bg-brand-primary dark:bg-indigo-400 animate-pulse"></span>
+                    Budget Mode On
+                </div>
+                
+                <!-- Dark Mode Toggle -->
+                <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-transform hover:scale-105">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+                
+                <button class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm relative transition-transform hover:scale-105">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Containers -->
+        <div class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
+            
+            <!-- Dashboard Home -->
+            <section id="home" class="page-section active">
+                
+                <!-- Fixed Hero Panel using standard Tailwind utilities -->
+                <div class="bg-gradient-to-br from-slate-900 to-indigo-600 dark:from-slate-900 dark:to-brand-primary rounded-3xl p-8 md:p-10 mb-8 shadow-floating text-white flex flex-col md:flex-row justify-between items-start md:items-end gap-8 relative overflow-hidden">
+                    <!-- Decorative circle -->
+                    <div class="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                    
+                    <div class="max-w-2xl relative z-10">
+                        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium mb-4 border border-white/20 shadow-sm">Welcome back!</span>
+                        <h1 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight text-white drop-shadow-sm">
+                            Hey <span id="welcome-firstname">User</span>, <br>
+                            <span class="text-brand-secondary drop-shadow-md">find a place</span> that fits your money.
+                        </h1>
+                        <p class="text-indigo-100 text-lg max-w-xl">Browse verified shared rooms, check your budget before you commit, and message hosts directly.</p>
+                    </div>
+                    
+                    <div class="flex flex-row md:flex-col gap-4 w-full md:w-auto relative z-10">
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex-1 shadow-sm">
+                            <p class="text-indigo-100 text-xs uppercase font-bold tracking-wider mb-1">Matches Nearby</p>
+                            <p class="text-3xl font-bold text-white">12</p>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex-1 shadow-sm">
+                            <p class="text-indigo-100 text-xs uppercase font-bold tracking-wider mb-1">Avg Monthly Share</p>
+                            <p class="text-3xl font-bold text-white">₹8.5K</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid lg:grid-cols-3 gap-8 mb-8">
+                    <!-- Quick Actions -->
+                    <div class="lg:col-span-2 grid sm:grid-cols-2 gap-4">
+                        <button class="glass-panel p-6 rounded-2xl text-left hover:-translate-y-1 transition-all group" onclick="openPage('matcher')">
+                            <div class="w-12 h-12 bg-brand-light dark:bg-indigo-900/40 text-brand-primary dark:text-indigo-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                            </div>
+                            <h3 class="font-bold text-lg mb-1 group-hover:text-brand-primary dark:group-hover:text-indigo-400">Run Smart Match</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm">Compare specific properties with your monthly income.</p>
+                        </button>
+                        
+                        <button class="glass-panel p-6 rounded-2xl text-left hover:-translate-y-1 transition-all group" onclick="openPage('calculator')">
+                            <div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-brand-secondary dark:text-orange-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <h3 class="font-bold text-lg mb-1 group-hover:text-brand-secondary dark:group-hover:text-orange-400">Calculate Split</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm">Figure out equal or custom roommate splits easily.</p>
+                        </button>
+                    </div>
+
+                    <!-- Next Best Action -->
+                    <div class="glass-panel rounded-2xl p-6 flex flex-col">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-brand-primary dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Priority Task
+                        </h3>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex-1 flex flex-col justify-center">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-slate-200">Host replied</span>
+                                <span class="text-xs text-brand-primary dark:text-indigo-300 font-bold bg-brand-light dark:bg-indigo-900/50 px-2 py-1 rounded">New</span>
+                            </div>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Meera from Green View PG just responded to your query.</p>
+                            <button class="mt-auto w-full py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-hover transition-colors" onclick="openPage('messages')">
+                                View Message
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommended Listings -->
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold">Recommended for you</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm">Based on your budget and location.</p>
+                    </div>
+                    <button class="text-brand-primary dark:text-indigo-400 font-semibold hover:text-brand-hover dark:hover:text-indigo-300 flex items-center gap-1" onclick="openPage('explore')">
+                        View all <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="home-listings">
+                    <!-- Listings injected by JS -->
+                </div>
+            </section>
+
+            <!-- Explore Page -->
+            <section id="explore" class="page-section">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-extrabold mb-2">Explore Stays</h1>
+                    <p class="text-slate-500 dark:text-slate-400">Search by area, budget and room type without leaving the dashboard.</p>
+                </div>
+
+                <div class="glass-panel p-4 md:p-6 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-1 w-full">
+                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Search Location or Name</label>
+                        <div class="relative">
+                            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <input type="text" id="listing-search" class="input-field pl-10" placeholder="e.g., Koramangala, PG..." oninput="renderListings('explore-listings')">
+                        </div>
+                    </div>
+                    <div class="w-full md:w-48">
+                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Max Budget</label>
+                        <select id="budget-filter" class="input-field" onchange="renderListings('explore-listings')">
+                            <option value="all">Any budget</option>
+                            <option value="6500">Under ₹6,500</option>
+                            <option value="8000">Under ₹8,000</option>
+                            <option value="10000">Under ₹10,000</option>
+                        </select>
+                    </div>
+                    <div class="w-full md:w-48">
+                        <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Room Type</label>
+                        <select id="type-filter" class="input-field" onchange="renderListings('explore-listings')">
+                            <option value="all">Any type</option>
+                            <option value="shared">Shared Room</option>
+                            <option value="private">Private Room</option>
+                        </select>
+                    </div>
+                    <button class="w-full md:w-auto bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-hover shadow-md transition-all" onclick="renderListings('explore-listings')">
+                        Filter
+                    </button>
+                </div>
+
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="explore-listings">
+                    <!-- Listings injected by JS -->
+                </div>
+            </section>
+
+            <!-- Matcher Page -->
+            <section id="matcher" class="page-section">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+                    <div>
+                        <h1 class="text-3xl font-extrabold mb-2">Smart Property Match</h1>
+                        <p class="text-slate-500 dark:text-slate-400">Analyze a property share against your income.</p>
+                    </div>
+                    <button class="bg-white dark:bg-slate-800 border-2 border-brand-primary dark:border-indigo-500 text-brand-primary dark:text-indigo-400 px-5 py-2.5 rounded-xl font-bold hover:bg-brand-light dark:hover:bg-slate-700 transition-colors" onclick="openPage('calculator')">
+                        Open Full Budget
+                    </button>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Property Card -->
+                    <div class="glass-panel rounded-3xl overflow-hidden flex flex-col">
+                        <div class="h-64 relative">
+                            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80" alt="Apartment" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+                            <div class="absolute bottom-4 left-6 text-white">
+                                <span class="bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded mb-2 inline-block">3BHK Apartment</span>
+                                <h2 class="text-2xl font-bold">Premium Downtown Flat</h2>
+                                <p class="text-slate-200 text-sm flex items-center gap-1 mt-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                                    Koramangala, Sector 3
+                                </p>
+                            </div>
+                            <div class="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-extrabold shadow-sm" id="base-rent" data-value="24000">
+                                ₹24,000 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/mo total</span>
+                            </div>
+                        </div>
+                        <div class="p-6 flex-1 bg-white dark:bg-slate-800">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="font-bold text-lg dark:text-white">Current Residents</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Looking for 1 more person</p>
+                                </div>
+                                <div class="flex -space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-blue-700 dark:text-blue-300">R</div>
+                                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-green-700 dark:text-green-300">P</div>
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300">A</div>
+                                    <div id="avatar-you" class="w-10 h-10 rounded-full bg-brand-primary border-2 border-white dark:border-slate-800 items-center justify-center font-bold text-white text-xs hidden">You</div>
+                                </div>
+                            </div>
+                            <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Fully furnished shared spaces</li>
+                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> High-speed Wi-Fi setup</li>
+                                <li class="flex items-center gap-3"><svg class="w-5 h-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 1.5km from main tech park</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col justify-center">
+                        <h3 class="font-bold text-xl mb-6">Analyze Your Fit</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">Which room are you taking?</label>
+                            <div class="bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex">
+                                <button id="btn-standard" class="flex-1 py-2 text-center rounded-lg font-semibold bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm transition-all" onclick="setRoomType('standard')">Standard (Smaller)</button>
+                                <button id="btn-master" class="flex-1 py-2 text-center rounded-lg font-medium text-slate-500 dark:text-slate-400 transition-all" onclick="setRoomType('master')">Master (Ensuite)</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <div class="flex justify-between text-sm font-semibold mb-3">
+                                <span>Est. total flat utilities</span>
+                                <span id="utility-val" class="text-brand-primary dark:text-indigo-400">₹3,000</span>
+                            </div>
+                            <input type="range" id="utility-slider" min="0" max="10000" step="500" value="3000" oninput="updateUtility(this.value)">
+                            <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                <span>₹0</span><span>₹10k</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-900 dark:text-slate-200 mb-2">Your Monthly Income (₹)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                <input type="number" id="user-income" class="input-field pl-8 font-semibold text-lg" placeholder="e.g. 45000" min="0">
+                            </div>
+                        </div>
+
+                        <button class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold shadow-lg shadow-brand-primary/30 hover:bg-brand-hover hover:-translate-y-0.5 transition-all" onclick="analyzeMatch()">
+                            Calculate My Share
+                        </button>
+
+                        <!-- Results -->
+                        <div id="match-result-box" class="mt-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hidden">
+                            <div class="flex justify-between items-end mb-4">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Your Est. Share</p>
+                                    <h2 id="share-amount" class="text-3xl font-extrabold text-slate-900 dark:text-white">₹0</h2>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Income Used</p>
+                                    <h2 id="percentage-used" class="text-2xl font-bold text-slate-900 dark:text-white">0%</h2>
+                                </div>
+                            </div>
+                            
+                            <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full mb-3 overflow-hidden">
+                                <div id="meter-bar" class="h-full rounded-full transition-all duration-500 w-0"></div>
+                            </div>
+                            
+                            <p id="breakdown-info" class="text-xs text-slate-500 dark:text-slate-400 text-center mb-4"></p>
+                            <div id="status-text" class="text-sm font-bold p-3 rounded-lg text-center"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calculator Page -->
+            <section id="calculator" class="page-section">
+                <div class="mb-8 max-w-3xl">
+                    <h1 class="text-3xl font-extrabold mb-2">Split & Budget Calculator</h1>
+                    <p class="text-slate-500 dark:text-slate-400">Figure out fair roommate splits and verify affordability for any property.</p>
+                </div>
+
+                <div class="grid lg:grid-cols-5 gap-8 items-start">
+                    
+                    <!-- Form -->
+                    <div class="lg:col-span-3 glass-panel rounded-3xl p-6 md:p-8">
+                        <form onsubmit="calculateSplit(event)">
+                            
+                            <!-- Section 1 -->
+                            <div class="mb-8">
+                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">1. Housing Costs</h2>
+                                <div class="grid sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Rent (₹)</label>
+                                        <input type="number" id="calc-rent" class="input-field" placeholder="e.g. 20000" required min="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Utilities (₹)</label>
+                                        <input type="number" id="calc-util" class="input-field" placeholder="e.g. 2000" value="0" min="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Total Roommates</label>
+                                        <input type="number" id="calc-roommates" class="input-field" value="2" min="1" required oninput="renderCustomSplitFields()">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Split Strategy</label>
+                                        <select id="calc-split-mode" class="input-field" onchange="renderCustomSplitFields()">
+                                            <option value="equal">Equal Split</option>
+                                            <option value="custom">Custom (By Room)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="calc-custom-split" class="grid sm:grid-cols-2 gap-4 mt-4 hidden"></div>
+                            </div>
+
+                            <!-- Section 2 -->
+                            <div class="mb-8">
+                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">2. Your Financials</h2>
+                                <div class="grid sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Monthly Income (₹)</label>
+                                        <input type="number" id="calc-income" class="input-field" placeholder="e.g. 50000" min="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 dark:text-slate-200">Max Rent Target (%)</label>
+                                        <input type="number" id="calc-percent" class="input-field" placeholder="Usually 30%" value="30" min="1" max="100">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 3 -->
+                            <div class="mb-8">
+                                <h2 class="text-lg font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 dark:text-white">3. Estimated Expenses (Optional)</h2>
+                                <div class="grid sm:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Food/Groceries</label><input type="number" id="calc-food" class="input-field" value="0" min="0"></div>
+                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Travel</label><input type="number" id="calc-travel" class="input-field" value="0" min="0"></div>
+                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Personal/Other</label><input type="number" id="calc-other" class="input-field" value="0" min="0"></div>
+                                    <div><label class="block text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Savings Goal</label><input type="number" id="calc-savings" class="input-field" value="0" min="0"></div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-brand-primary text-white py-3.5 rounded-xl font-bold hover:bg-brand-hover transition-colors">
+                                Generate Budget Report
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="lg:col-span-2">
+                        <div id="calc-results" class="sticky top-28 hidden">
+                            <!-- Injected by JS -->
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div id="calc-empty" class="glass-panel rounded-3xl p-8 text-center flex flex-col items-center justify-center h-full min-h-[400px]">
+                            <div class="w-16 h-16 bg-brand-light dark:bg-slate-800 rounded-full flex items-center justify-center text-brand-primary dark:text-indigo-400 mb-4">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2 dark:text-white">Awaiting Data</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Fill out the form and generate your report to see a detailed breakdown of your split and budget health.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Messages Page -->
+            <section id="messages" class="page-section h-[calc(100vh-140px)] min-h-[500px]">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl h-full flex overflow-hidden shadow-soft">
+                    
+                    <!-- Sidebar List -->
+                    <div class="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col" id="conv-sidebar">
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                            <h2 class="text-xl font-bold mb-4 dark:text-white">Messages</h2>
+                            <div class="relative">
+                                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                <input type="text" class="input-field pl-9 py-2 text-sm" placeholder="Search chats...">
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2" id="conversation-list">
+                            <!-- Convos injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Chat Area -->
+                    <div class="flex-1 flex flex-col hidden md:flex" id="chat-area">
+                        <!-- Header -->
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+                            <div class="flex items-center gap-3">
+                                <button class="md:hidden p-2 text-slate-500 dark:text-slate-400" onclick="toggleChatMobile()">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                </button>
+                                <div id="chat-avatar" class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/40 text-brand-primary dark:text-indigo-400 flex items-center justify-center font-bold">G</div>
+                                <div>
+                                    <strong id="chat-title" class="block leading-tight text-slate-900 dark:text-white">Green View PG</strong>
+                                    <span id="chat-subtitle" class="text-xs text-slate-500 dark:text-slate-400">Host: Meera</span>
+                                </div>
+                            </div>
+                            <button class="text-xs font-bold text-brand-primary dark:text-indigo-300 bg-brand-light dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-brand-primary hover:text-white transition-colors border border-brand-primary/20 dark:border-indigo-500/30" onclick="openPage('matcher')">
+                                Check Match
+                            </button>
+                        </div>
+                        
+                        <!-- Messages -->
+                        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-white dark:bg-slate-900" id="chat-messages">
+                            <!-- Messages injected by JS -->
+                        </div>
+                        
+                        <!-- Input -->
+                        <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                            <form class="flex gap-2" onsubmit="sendMessage(event)">
+                                <input id="message-input" type="text" class="input-field flex-1" placeholder="Type your message..." required autocomplete="off">
+                                <button type="submit" class="w-12 h-12 bg-brand-primary text-white rounded-xl flex items-center justify-center hover:bg-brand-hover transition-colors shadow-md">
+                                    <svg class="w-5 h-5 -ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
 </div>
 
-<nav class="mobile-nav">
-    <button class="nav-item active" onclick="openPage('home', this)"><div>🏠</div><small>Home</small></button>
-    <button class="nav-item" onclick="openPage('explore', this)"><div>🔍</div><small>Explore</small></button>
-    <button class="nav-item" onclick="openPage('calculator', this)"><div>🧮</div><small>Split</small></button>
-    <button class="nav-item" onclick="sessionManager.logout()"><div>🚪</div><small>Logout</small></button>
+<!-- Mobile Bottom Nav -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around p-2 z-40 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="home" onclick="openPage('home')">
+        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        <span class="text-[10px] font-medium">Home</span>
+    </button>
+    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="explore" onclick="openPage('explore')">
+        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <span class="text-[10px] font-medium">Explore</span>
+    </button>
+    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="matcher" onclick="openPage('matcher')">
+        <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+        <span class="text-[10px] font-medium">Match</span>
+    </button>
+    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400" data-page="calculator" onclick="openPage('calculator')">
+         <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+        <span class="text-[10px] font-medium">Budget</span>
+    </button>
+    <button class="flex flex-col items-center p-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary dark:hover:text-indigo-400 relative" data-page="messages" onclick="openPage('messages')">
+        <div class="relative">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <span class="absolute top-0 -right-1 w-2.5 h-2.5 bg-brand-secondary rounded-full border-2 border-white dark:border-slate-900"></span>
+        </div>
+        <span class="text-[10px] font-medium">Chat</span>
+    </button>
 </nav>
+<style> @supports (padding-bottom: env(safe-area-inset-bottom)) { .pb-safe { padding-bottom: env(safe-area-inset-bottom); } } </style>
 
+
+<!-- Scripts -->
 <script>
-// --- SESSION MANAGEMENT ---
-const sessionManager = {
-    init: function() {
-        // Retrieve user from session storage
-        let user = sessionStorage.getItem('thikana_user');
-        
-        // If no user exists, simulate a logged-in user for demonstration purposes
-        if (!user) {
-            user = { firstName: 'Navneet', lastName: 'Yadav', email: 'guest@thikana.com' };
-            sessionStorage.setItem('thikana_user', JSON.stringify(user));
+    // --- Dark Mode Logic ---
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+    function updateThemeIcons() {
+        if (!themeToggleBtn || !themeToggleDarkIcon || !themeToggleLightIcon) return;
+
+        if (document.documentElement.classList.contains('dark')) {
+            themeToggleLightIcon.classList.remove('hidden');
+            themeToggleDarkIcon.classList.add('hidden');
         } else {
-            user = JSON.parse(user);
+            themeToggleLightIcon.classList.add('hidden');
+            themeToggleDarkIcon.classList.remove('hidden');
         }
-        
-        // Update DOM with user data
-        this.updateUI(user);
-    },
-    updateUI: function(user) {
-        const initial = user.firstName.charAt(0).toUpperCase();
-        document.getElementById('sidebar-avatar').textContent = initial;
-        document.getElementById('sidebar-name').textContent = user.firstName + ' ' + user.lastName;
-        document.getElementById('welcome-firstname').textContent = user.firstName;
-    },
-    logout: function() {
-        sessionStorage.removeItem('thikana_user');
-        // In a real app, redirect to login page (index.html)
-        // window.location.href = 'index.html'; 
-        alert('You have been logged out successfully. (Redirect to Login omitted for demo)');
-        // Fallback for demo reload
-        window.location.reload(); 
     }
-};
-
-// Initialize Session on Load
-window.addEventListener('DOMContentLoaded', () => {
-    sessionManager.init();
-});
-
-// --- SPLIT & AFFORDABILITY CALCULATOR ---
-function getRoommateCount() {
-    return Math.max(1, parseInt(document.getElementById('calc-roommates').value) || 1);
-}
-
-function renderCustomSplitFields() {
-    const mode = document.getElementById('calc-split-mode').value;
-    const customBox = document.getElementById('calc-custom-split');
-    const roommates = getRoommateCount();
-
-    customBox.style.display = mode === 'custom' ? 'grid' : 'none';
-    if (mode !== 'custom') {
-        customBox.innerHTML = '';
-        return;
-    }
-
-    customBox.innerHTML = Array.from({ length: roommates }, (_, index) => `
-        <div class="input-group" style="margin-bottom: 0;">
-            <label>Roommate ${index + 1} Amount (₹)</label>
-            <input type="number" class="calc-custom-share" min="0" placeholder="e.g. ${index === 0 ? '6000' : '5000'}">
-        </div>
-    `).join('');
-}
-
-function getBudgetHealth(score) {
-    if (score >= 80) return { label: 'Excellent', className: 'alert-success', color: '#16A34A' };
-    if (score >= 60) return { label: 'Comfortable', className: 'alert-success', color: '#22C55E' };
-    if (score >= 40) return { label: 'Tight', className: 'alert-warning', color: '#F59E0B' };
-    return { label: 'Risky', className: 'alert-error', color: '#DC2626' };
-}
-
-function calculateBudgetScore(income, housingShare, lifestyleExpenses, savingsGoal, maxPercent) {
-    if (income <= 0) return null;
-
-    const housingPercent = (housingShare / income) * 100;
-    const spendingPercent = ((housingShare + lifestyleExpenses) / income) * 100;
-    const savingsPercent = (savingsGoal / income) * 100;
-    const leftover = income - housingShare - lifestyleExpenses - savingsGoal;
-
-    const housingScore = Math.max(0, 40 - Math.max(0, housingPercent - maxPercent) * 1.6);
-    const spendingScore = Math.max(0, 35 - Math.max(0, spendingPercent - 65) * 1.4);
-    const savingsScore = savingsPercent >= 20 ? 25 : savingsPercent >= 10 ? 18 : savingsPercent >= 5 ? 10 : 4;
-    const leftoverPenalty = leftover < 0 ? Math.min(25, Math.abs(leftover) / income * 100) : 0;
-
-    return Math.max(0, Math.min(100, Math.round(housingScore + spendingScore + savingsScore - leftoverPenalty)));
-}
-
-function calculateSplit(e) {
-    e.preventDefault();
     
-    // Get values
-    const rent = parseFloat(document.getElementById('calc-rent').value) || 0;
-    const utilities = parseFloat(document.getElementById('calc-util').value) || 0;
-    const roommates = getRoommateCount();
-    const splitMode = document.getElementById('calc-split-mode').value;
-    const income = parseFloat(document.getElementById('calc-income').value) || 0;
-    const maxPercent = parseFloat(document.getElementById('calc-percent').value) || 30;
-    const food = parseFloat(document.getElementById('calc-food').value) || 0;
-    const travel = parseFloat(document.getElementById('calc-travel').value) || 0;
-    const other = parseFloat(document.getElementById('calc-other').value) || 0;
-    const savingsGoal = parseFloat(document.getElementById('calc-savings').value) || 0;
+    updateThemeIcons();
 
-    // Calculations
-    const totalCost = rent + utilities;
-    let perPersonCost = totalCost / roommates;
-    let myRentShare = rent / roommates; // Comparing purely rent against income is standard
-    let splitDetails = '';
-
-    if (splitMode === 'custom') {
-        const customShares = Array.from(document.querySelectorAll('.calc-custom-share')).map(input => parseFloat(input.value) || 0);
-        const customTotal = customShares.reduce((sum, amount) => sum + amount, 0);
-
-        if (customShares.length !== roommates || customShares.some(amount => amount <= 0)) {
-            alert('Please enter a custom amount for every roommate.');
-            return;
-        }
-
-        if (Math.abs(customTotal - totalCost) > 1) {
-            alert(`Custom shares must add up to ₹${totalCost.toFixed(2)}.`);
-            return;
-        }
-
-        perPersonCost = customShares[0];
-        myRentShare = rent > 0 && totalCost > 0 ? perPersonCost * (rent / totalCost) : 0;
-        splitDetails = customShares.map((amount, index) => `
-            <div><strong>Roommate ${index + 1}:</strong> ₹${amount.toFixed(2)} / month</div>
-        `).join('');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+            updateThemeIcons();
+        });
     }
 
-    const lifestyleExpenses = food + travel + other;
-    const fullMonthlyExpense = perPersonCost + lifestyleExpenses;
-    const plannedOutflow = fullMonthlyExpense + savingsGoal;
-    const budgetScore = calculateBudgetScore(income, perPersonCost, lifestyleExpenses, savingsGoal, maxPercent);
-    const budgetHealth = budgetScore === null ? null : getBudgetHealth(budgetScore);
-
-    let resultHTML = `
-        <div class="alert-success">
-            <div>${splitMode === 'custom' ? 'Your Custom Split:' : 'Fair Split per person:'}</div>
-            <div class="result-stat">₹${perPersonCost.toFixed(2)} / month</div>
-            <small>Total Cost (Rent + Util): ₹${totalCost.toFixed(2)}</small>
-            ${splitDetails ? `<div style="margin-top: 12px;">${splitDetails}</div>` : ''}
-        </div>
-        <div class="alert-success" style="margin-top: 15px;">
-            <strong>Full Monthly Expense</strong>
-            <div class="result-stat">₹${fullMonthlyExpense.toFixed(2)} / month</div>
-            <small>Housing share + food, travel and other monthly expenses.</small>
-            ${savingsGoal > 0 ? `<div style="margin-top: 8px;">Planned with savings: <strong>₹${plannedOutflow.toFixed(2)}</strong></div>` : ''}
-        </div>
-    `;
-
-    // Affordability check (if income provided)
-    if (income > 0) {
-        const rentToIncomeRatio = (myRentShare / income) * 100;
-        const expenseRatio = (fullMonthlyExpense / income) * 100;
+    // --- Custom Toast System (Replaces alert()) ---
+    function showToast(message, type = 'error') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
         
-        if (rentToIncomeRatio > maxPercent) {
-            resultHTML += `
-                <div class="alert-error" style="margin-top: 15px;">
-                    <strong>⚠️ Budget Warning</strong><br>
-                    Your share of the rent (₹${myRentShare.toFixed(2)}) is <strong>${rentToIncomeRatio.toFixed(1)}%</strong> of your monthly income. 
-                    This exceeds your set limit of ${maxPercent}%. Consider finding more roommates or a cheaper place.
-                </div>
-            `;
+        let bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+        
+        toast.className = `toast-enter flex items-center p-4 mb-4 text-white rounded-xl shadow-lg ${bgColor}`;
+        toast.innerHTML = `<span class="text-sm font-semibold">${message}</span>`;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+
+    // --- Data & State ---
+    const sessionManager = {
+        init() {
+            let user = sessionStorage.getItem('thikana_user');
+            if (!user) {
+                user = { firstName: 'Navneet', lastName: 'Yadav', email: 'guest@thikana.com' };
+                sessionStorage.setItem('thikana_user', JSON.stringify(user));
+            } else {
+                user = JSON.parse(user);
+            }
+            this.updateUI(user);
+        },
+        updateUI(user) {
+            const initial = user.firstName.charAt(0).toUpperCase();
+            document.getElementById('sidebar-avatar').textContent = initial;
+            document.getElementById('sidebar-name').textContent = user.firstName + ' ' + user.lastName;
+            document.getElementById('welcome-firstname').textContent = user.firstName;
+        },
+        logout() {
+            sessionStorage.removeItem('thikana_user');
+            window.location.href = 'login.html'; // Adjust as needed
+        }
+    };
+
+    const propertyData = [
+        { name: 'Green View PG', price: 6500, distance: '1.1 km', area: 'Koramangala', type: 'shared', room: 'Shared room', perk: 'Food available', img: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80', match: 94 },
+        { name: 'City Heights Flat', price: 9500, distance: '2 km', area: 'HSR Layout', type: 'private', room: 'Private room', perk: 'Wi-Fi included', img: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&q=80', match: 88 },
+        { name: 'Student Residency', price: 5800, distance: '900 m', area: 'BTM Layout', type: 'shared', room: '3 roommates', perk: 'Electricity inc.', img: 'https://images.unsplash.com/photo-1502672260266-1c1de2422008?auto=format&fit=crop&w=400&q=80', match: 91 },
+        { name: 'Metro Nest Hostel', price: 4800, distance: '2.4 km', area: 'Indiranagar', type: 'shared', room: 'Dorm share', perk: 'Laundry nearby', img: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=400&q=80', match: 82 },
+        { name: 'Blue Orchid Studio', price: 12000, distance: '3 km', area: 'Whitefield', type: 'private', room: 'Single occupancy', perk: 'Attached bath', img: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=400&q=80', match: 76 }
+    ];
+
+    const conversations = [
+        { id: 'green', name: 'Green View PG', meta: 'Host: Meera', avatar: 'G', messages: [
+            { who: 'them', text: 'Hi Navneet, the shared room is available from Monday.' },
+            { who: 'me', text: 'Great. Is food included in the monthly amount?' },
+            { who: 'them', text: 'Yes, breakfast and dinner are included. Electricity is separate.' }
+        ] },
+        { id: 'city', name: 'City Heights Flat', meta: 'Roommate: Arjun', avatar: 'C', messages: [
+            { who: 'them', text: 'We are looking for one roommate for the private room.' },
+            { who: 'them', text: 'The flat is 2 km from campus and has Wi-Fi included.' }
+        ] },
+        { id: 'student', name: 'Student Residency', meta: 'Host: Kavya', avatar: 'S', messages: [
+            { who: 'me', text: 'Can I schedule a visit this weekend?' },
+            { who: 'them', text: 'Yes, Saturday after 11 AM works.' }
+        ] }
+    ];
+    let activeConversation = conversations[0].id;
+
+    // --- Helpers ---
+    const formatMoney = (amount) => '₹' + Math.round(amount).toLocaleString('en-IN');
+
+    // --- Navigation ---
+    function openPage(pageName, el) {
+        // Hide all pages
+        document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+        // Show target
+        document.getElementById(pageName).classList.add('active');
+        
+        // Update Desktop Nav
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.classList.remove('text-slate-900', 'dark:text-slate-100');
+            btn.classList.add('text-slate-600', 'dark:text-slate-400');
+        });
+        const desktopBtn = document.querySelector(`.nav-btn[data-page="${pageName}"]`);
+        if(desktopBtn) {
+            desktopBtn.classList.add('active');
+            desktopBtn.classList.remove('text-slate-600', 'dark:text-slate-400');
+            desktopBtn.classList.add('text-slate-900', 'dark:text-slate-100');
+        }
+
+        // Update Mobile Nav
+        document.querySelectorAll('.lg\\:hidden.fixed button').forEach(btn => {
+            btn.classList.remove('text-brand-primary', 'dark:text-indigo-400');
+            btn.classList.add('text-slate-500', 'dark:text-slate-400');
+        });
+        const mobileBtn = document.querySelector(`.lg\\:hidden.fixed button[data-page="${pageName}"]`);
+        if(mobileBtn) {
+            mobileBtn.classList.add('text-brand-primary', 'dark:text-indigo-400');
+            mobileBtn.classList.remove('text-slate-500', 'dark:text-slate-400');
+        }
+
+        // Close mobile sidebar if open
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('translate-x-0') && window.innerWidth < 1024) {
+            toggleSidebar();
+        }
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        if (sidebar.classList.contains('-translate-x-full')) {
+            sidebar.classList.remove('-translate-x-full');
+            sidebar.classList.add('translate-x-0');
+            overlay.classList.remove('hidden');
         } else {
-            resultHTML += `
-                <div class="alert-success" style="background: #F0FDF4; margin-top: 15px;">
-                    <strong>✅ Affordable</strong><br>
-                    Your share of the rent is <strong>${rentToIncomeRatio.toFixed(1)}%</strong> of your income, keeping you safely under your ${maxPercent}% limit.
+            sidebar.classList.add('-translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden');
+        }
+    }
+
+    // --- STREAMING_CHUNK:Adding Render functions for Listings... ---
+    // --- Render Listings ---
+    function renderListings(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        let search = '', budget = 'all', type = 'all';
+        
+        if (containerId === 'explore-listings') {
+            search = (document.getElementById('listing-search')?.value || '').toLowerCase();
+            budget = document.getElementById('budget-filter')?.value || 'all';
+            type = document.getElementById('type-filter')?.value || 'all';
+        }
+
+        const filtered = propertyData.filter(prop => {
+            const mSearch = !search || [prop.name, prop.area, prop.room, prop.perk].join(' ').toLowerCase().includes(search);
+            const mBudget = budget === 'all' || prop.price <= Number(budget);
+            const mType = type === 'all' || prop.type === type;
+            return mSearch && mBudget && mType;
+        });
+
+        // Slice for home page
+        const displayData = containerId === 'home-listings' ? filtered.slice(0, 3) : filtered;
+
+        container.innerHTML = displayData.map(prop => `
+            <div class="glass-panel rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                <div class="h-48 relative overflow-hidden">
+                    <img src="${prop.img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="${prop.name}">
+                    <div class="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-2.5 py-1 rounded-lg text-xs font-bold text-brand-primary dark:text-indigo-400 shadow-sm flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                        ${prop.match}% Match
+                    </div>
+                    <div class="absolute bottom-0 w-full bg-gradient-to-t from-slate-900/80 to-transparent p-4">
+                        <h3 class="text-white font-bold text-lg leading-tight">${prop.name}</h3>
+                        <p class="text-slate-200 text-xs flex items-center gap-1 mt-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                            ${prop.area} | ${prop.distance}
+                        </p>
+                    </div>
+                </div>
+                <div class="p-4 flex-1 flex flex-col bg-white dark:bg-slate-800">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="text-xl font-extrabold text-slate-900 dark:text-white">${formatMoney(prop.price)}<span class="text-xs font-normal text-slate-500 dark:text-slate-400">/mo</span></div>
+                        <span class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded">${prop.type === 'shared' ? 'Shared' : 'Private'}</span>
+                    </div>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 flex-1">${prop.room} • ${prop.perk}</p>
+                    <div class="flex gap-2 mt-auto">
+                        <button class="flex-1 bg-brand-light dark:bg-indigo-900/30 text-brand-primary dark:text-indigo-400 border border-brand-primary/10 dark:border-indigo-500/30 font-semibold py-2 rounded-xl text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors" onclick="openPage('matcher')">Analyze</button>
+                        <button class="flex-1 bg-brand-primary text-white font-semibold py-2 rounded-xl text-sm hover:bg-brand-hover transition-colors shadow-sm" onclick="openPage('messages')">Message</button>
+                    </div>
+                </div>
+            </div>
+        `).join('') || `<div class="col-span-full p-8 text-center text-slate-500 dark:text-slate-400 glass-panel rounded-2xl">No listings match these filters.</div>`;
+    }
+
+    // --- STREAMING_CHUNK:Adding Matcher logic... ---
+    // --- Smart Matcher Logic ---
+    let currentRoomType = 'standard';
+    let currentUtility = 3000;
+
+    function updateUtility(val) {
+        currentUtility = parseInt(val);
+        document.getElementById('utility-val').innerText = formatMoney(currentUtility);
+        if (!document.getElementById('match-result-box').classList.contains('hidden')) analyzeMatch();
+    }
+
+    function setRoomType(type) {
+        currentRoomType = type;
+        const btnStandard = document.getElementById('btn-standard');
+        const btnMaster = document.getElementById('btn-master');
+        
+        if(type === 'standard') {
+            btnStandard.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-primary', 'dark:text-white');
+            btnStandard.classList.remove('text-slate-500', 'dark:text-slate-400');
+            
+            btnMaster.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-primary', 'dark:text-white');
+            btnMaster.classList.add('text-slate-500', 'dark:text-slate-400');
+        } else {
+            btnMaster.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-primary', 'dark:text-white');
+            btnMaster.classList.remove('text-slate-500', 'dark:text-slate-400');
+            
+            btnStandard.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-primary', 'dark:text-white');
+            btnStandard.classList.add('text-slate-500', 'dark:text-slate-400');
+        }
+        
+        if (!document.getElementById('match-result-box').classList.contains('hidden')) analyzeMatch();
+    }
+
+    function analyzeMatch() {
+        const income = parseFloat(document.getElementById('user-income').value);
+        if (!income || income <= 0) {
+            showToast('Please enter a valid monthly income.', 'error');
+            return;
+        }
+        const baseRent = parseFloat(document.getElementById('base-rent').getAttribute('data-value'));
+        const totalPeople = 4;
+        
+        // Simple logic for share
+        const userRentShare = currentRoomType === 'master' ? baseRent * 0.35 : baseRent * 0.2166;
+        const userUtilityShare = currentUtility / totalPeople;
+        const totalUserShare = userRentShare + userUtilityShare;
+        const percentageUsed = (totalUserShare / income) * 100;
+
+        // UI Updates
+        document.getElementById('avatar-you').classList.remove('hidden');
+        document.getElementById('avatar-you').classList.add('flex');
+        
+        const resultBox = document.getElementById('match-result-box');
+        resultBox.classList.remove('hidden');
+        
+        document.getElementById('share-amount').innerText = formatMoney(totalUserShare);
+        document.getElementById('breakdown-info').innerText = `Rent: ${formatMoney(userRentShare)} | Utils: ${formatMoney(userUtilityShare)}`;
+        document.getElementById('percentage-used').innerText = percentageUsed.toFixed(1) + '%';
+
+        const meterBar = document.getElementById('meter-bar');
+        const statusText = document.getElementById('status-text');
+        
+        // Slight delay for animation
+        setTimeout(() => { meterBar.style.width = Math.min(percentageUsed, 100) + '%'; }, 50);
+        
+        if (percentageUsed <= 25) {
+            meterBar.className = 'h-full rounded-full transition-all duration-500 bg-green-500';
+            statusText.className = 'text-sm font-bold p-3 rounded-lg text-center bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800';
+            statusText.innerText = 'Excellent Match. Plenty of room in your budget.';
+        } else if (percentageUsed <= 40) {
+            meterBar.className = 'h-full rounded-full transition-all duration-500 bg-orange-500';
+            statusText.className = 'text-sm font-bold p-3 rounded-lg text-center bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-200 dark:border-orange-800';
+            statusText.innerText = 'Manageable, but watch other expenses.';
+        } else {
+            meterBar.className = 'h-full rounded-full transition-all duration-500 bg-red-500';
+            statusText.className = 'text-sm font-bold p-3 rounded-lg text-center bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800';
+            statusText.innerText = 'Risky. This takes up too much of your income.';
+        }
+    }
+
+    // --- STREAMING_CHUNK:Adding Calculator logic... ---
+    // --- Calculator Logic ---
+    function getRoommateCount() {
+        return Math.max(1, parseInt(document.getElementById('calc-roommates').value) || 1);
+    }
+
+    function renderCustomSplitFields() {
+        const mode = document.getElementById('calc-split-mode').value;
+        const customBox = document.getElementById('calc-custom-split');
+        const roommates = getRoommateCount();
+
+        if (mode === 'custom') {
+            customBox.classList.remove('hidden');
+            customBox.innerHTML = Array.from({ length: roommates }, (_, index) => `
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Person ${index + 1} Rent</label>
+                    <input type="number" class="calc-custom-share input-field py-2 text-sm" min="0" placeholder="₹">
+                </div>
+            `).join('');
+        } else {
+            customBox.classList.add('hidden');
+            customBox.innerHTML = '';
+        }
+    }
+
+    function calculateSplit(e) {
+        e.preventDefault();
+        // Gathering inputs
+        const rent = parseFloat(document.getElementById('calc-rent').value) || 0;
+        const utilities = parseFloat(document.getElementById('calc-util').value) || 0;
+        const roommates = getRoommateCount();
+        const splitMode = document.getElementById('calc-split-mode').value;
+        const income = parseFloat(document.getElementById('calc-income').value) || 0;
+        const maxPercent = parseFloat(document.getElementById('calc-percent').value) || 30;
+        
+        const food = parseFloat(document.getElementById('calc-food').value) || 0;
+        const travel = parseFloat(document.getElementById('calc-travel').value) || 0;
+        const other = parseFloat(document.getElementById('calc-other').value) || 0;
+        const savingsGoal = parseFloat(document.getElementById('calc-savings').value) || 0;
+        
+        const totalCost = rent + utilities;
+        let myRentShare = rent / roommates;
+        let myUtilShare = utilities / roommates;
+        let perPersonTotal = myRentShare + myUtilShare;
+        
+        let splitDetailsHTML = '';
+
+        if (splitMode === 'custom') {
+            const customShares = Array.from(document.querySelectorAll('.calc-custom-share')).map(input => parseFloat(input.value) || 0);
+            const customTotal = customShares.reduce((sum, amount) => sum + amount, 0);
+            if (customShares.length !== roommates || customShares.some(amount => amount <= 0)) {
+                showToast('Please enter a valid amount for every person in custom split.', 'error');
+                return;
+            }
+            if (Math.abs(customTotal - rent) > 2) {
+                showToast(`Custom rent shares (${customTotal}) must add up to total rent (${rent}).`, 'error');
+                return;
+            }
+            // Assume user is Person 1 for calc
+            myRentShare = customShares[0];
+            perPersonTotal = myRentShare + myUtilShare; // Utilities still split equally
+            
+            splitDetailsHTML = `
+                <div class="mt-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg text-sm border border-slate-200 dark:border-slate-700">
+                    <p class="font-semibold mb-2 dark:text-white">Custom Breakdown (Rent only):</p>
+                    ${customShares.map((amount, i) => `<div class="flex justify-between text-slate-500 dark:text-slate-400 mb-1"><span>Person ${i + 1}${i===0?' (You)':''}</span><span class="font-medium text-slate-900 dark:text-slate-200">${formatMoney(amount)}</span></div>`).join('')}
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">*Utilities (${formatMoney(myUtilShare)}/ea) added to totals.</p>
                 </div>
             `;
         }
 
-        resultHTML += `
-            <div class="${budgetHealth.className}" style="margin-top: 15px;">
-                <strong>Budget Score: ${budgetScore}/100 - ${budgetHealth.label}</strong><br>
-                Your full monthly expense uses <strong>${expenseRatio.toFixed(1)}%</strong> of your income before savings.
-                <div class="score-meter"><span style="width: ${budgetScore}%; background: ${budgetHealth.color};"></span></div>
-            </div>
+        const lifestyleExpenses = food + travel + other;
+        const fullMonthlyOutflow = perPersonTotal + lifestyleExpenses;
+        
+        let reportHTML = `
+            <div class="glass-panel rounded-3xl p-6 md:p-8 animate-fadeUp">
+                <h3 class="text-xl font-extrabold mb-6 dark:text-white">Your Budget Report</h3>
+                
+                <!-- Share Card -->
+                <div class="bg-gradient-to-br from-brand-primary to-brand-hover rounded-2xl p-6 text-white mb-6 shadow-lg shadow-brand-primary/20">
+                    <p class="text-indigo-100 font-medium text-sm mb-1">${splitMode === 'custom' ? 'Your Custom Share' : 'Equal Share (Rent+Util)'}</p>
+                    <h4 class="text-4xl font-extrabold mb-2">${formatMoney(perPersonTotal)}<span class="text-lg font-normal opacity-80">/mo</span></h4>
+                    <p class="text-sm opacity-90 flex justify-between">
+                        <span>Rent: ${formatMoney(myRentShare)}</span>
+                        <span>Util: ${formatMoney(myUtilShare)}</span>
+                    </p>
+                </div>
+                ${splitDetailsHTML}
+
+                <!-- Total Outflow -->
+                <div class="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-6 bg-slate-50 dark:bg-slate-800/50">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-slate-900 dark:text-white">Total Est. Outflow</span>
+                        <span class="font-extrabold text-lg dark:text-white">${formatMoney(fullMonthlyOutflow)}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Includes housing + all lifestyle expenses.</p>
+                </div>
         `;
+
+        if (income > 0) {
+            const rentRatio = (myRentShare / income) * 100;
+            const outflowRatio = (fullMonthlyOutflow / income) * 100;
+            const leftover = income - fullMonthlyOutflow - savingsGoal;
+            
+            const isRentOk = rentRatio <= maxPercent;
+            
+            reportHTML += `
+                <div class="mb-6">
+                    <h4 class="font-bold mb-3 border-b border-slate-200 dark:border-slate-700 pb-2 dark:text-white">Health Checks</h4>
+                    
+                    <div class="flex items-start gap-3 mb-4 p-3 rounded-xl border ${isRentOk ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}">
+                        <svg class="w-5 h-5 mt-0.5 flex-shrink-0 ${isRentOk ? 'text-green-500' : 'text-red-500'}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="${isRentOk ? 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' : 'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'}" clip-rule="evenodd"></path></svg>
+                        <div>
+                            <p class="font-bold text-sm ${isRentOk ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}">Rent-to-Income: ${rentRatio.toFixed(1)}%</p>
+                            <p class="text-xs ${isRentOk ? 'text-green-700 dark:text-green-500' : 'text-red-700 dark:text-red-500'}">${isRentOk ? `Under your ${maxPercent}% limit.` : `Exceeds your ${maxPercent}% target.`}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Total Income Used</span><span class="font-medium dark:text-slate-200">${outflowRatio.toFixed(1)}%</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Savings Goal</span><span class="font-medium text-brand-primary dark:text-indigo-400">${formatMoney(savingsGoal)}</span></div>
+                        <div class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700"><span class="font-bold dark:text-white">Remaining Buffer</span><span class="font-bold ${leftover >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">${formatMoney(leftover)}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        reportHTML += `</div>`;
+        
+        document.getElementById('calc-empty').classList.add('hidden');
+        const resultsContainer = document.getElementById('calc-results');
+        resultsContainer.innerHTML = reportHTML;
+        resultsContainer.classList.remove('hidden');
     }
 
-    const resultsDiv = document.getElementById('calc-results');
-    resultsDiv.innerHTML = resultHTML;
-    resultsDiv.style.display = 'block';
-}
+    // --- STREAMING_CHUNK:Adding Chat logic... ---
+    // --- Messaging Logic ---
+    function renderConversations() {
+        const list = document.getElementById('conversation-list');
+        list.innerHTML = conversations.map(convo => `
+            <button class="w-full text-left p-3 rounded-xl mb-1 flex items-center gap-3 transition-colors ${convo.id === activeConversation ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700' : 'hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent'}" onclick="selectConversation('${convo.id}')">
+                <div class="w-10 h-10 rounded-full bg-brand-light dark:bg-indigo-900/40 text-brand-primary dark:text-indigo-400 flex-shrink-0 flex items-center justify-center font-bold text-sm">${convo.avatar}</div>
+                <div class="overflow-hidden flex-1">
+                    <div class="flex justify-between items-baseline mb-0.5">
+                        <strong class="text-sm text-slate-900 dark:text-white truncate block">${convo.name}</strong>
+                    </div>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 truncate block">${convo.messages[convo.messages.length - 1].text}</span>
+                </div>
+            </button>
+        `).join('');
+        renderChat();
+    }
 
-// --- MOCK DATA & NAVIGATION ---
-const propertyData = [
-    { name: "Green View PG", price: "5,500", distance: "1.1 km", type: "Shared room", perk: "🍛 Food available", icon: "🏠" },
-    { name: "City Heights Flat", price: "7,000", distance: "2 km", type: "Private room", perk: "📶 Wi-Fi included", icon: "🏢" },
-    { name: "Student Residency", price: "6,200", distance: "900 m", type: "2 roommates", perk: "⚡ Electricity included", icon: "🏠" }
-];
+    function selectConversation(id) {
+        activeConversation = id;
+        renderConversations();
+        
+        // On mobile, show chat area
+        if (window.innerWidth < 768) {
+            document.getElementById('conv-sidebar').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
+            document.getElementById('chat-area').classList.add('flex');
+        }
+    }
 
-function renderListings(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = propertyData.map(prop => `
-        <div class="listing">
-            <div class="listing-image">${prop.icon}</div>
-            <div class="listing-content">
-                <h3>${prop.name}</h3>
-                <div class="price">₹${prop.price} / month</div>
-                <div class="details">📍 ${prop.distance} from college<br>👥 ${prop.type}<br>${prop.perk}</div>
-                <button class="btn">View Details</button>
+    function toggleChatMobile() {
+        document.getElementById('conv-sidebar').classList.remove('hidden');
+        document.getElementById('chat-area').classList.add('hidden');
+        document.getElementById('chat-area').classList.remove('flex');
+    }
+
+    function renderChat() {
+        const convo = conversations.find(item => item.id === activeConversation);
+        document.getElementById('chat-title').textContent = convo.name;
+        document.getElementById('chat-subtitle').textContent = convo.meta;
+        document.getElementById('chat-avatar').textContent = convo.avatar;
+        
+        const messagesHtml = convo.messages.map(msg => `
+            <div class="flex ${msg.who === 'me' ? 'justify-end' : 'justify-start'}">
+                <div class="max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.who === 'me' ? 'bg-brand-primary text-white rounded-br-sm shadow-md shadow-brand-primary/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm border border-slate-200 dark:border-slate-700'}">
+                    ${msg.text}
+                </div>
             </div>
-        </div>
-    `).join('');
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    renderListings('home-listings');
-    renderListings('explore-listings');
-});
-
-function openPage(pageName, element) {
-    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
-    document.getElementById(pageName).classList.add("active");
-    
-    document.querySelectorAll(".sidebar .nav-item").forEach(item => item.classList.remove("active"));
-    document.querySelectorAll(".mobile-nav .nav-item").forEach(item => item.classList.remove("active"));
-    
-    if(element) element.classList.add("active");
-    
-    // Automatically select the corresponding desktop sidebar item if triggered from mobile nav
-    if(!element) {
-        document.querySelector(`.sidebar .nav-item[onclick*="${pageName}"]`).classList.add("active");
+        `).join('');
+        
+        const chatContainer = document.getElementById('chat-messages');
+        chatContainer.innerHTML = messagesHtml;
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-    window.scrollTo(0, 0);
-}
-</script>
 
+    function sendMessage(e) {
+        e.preventDefault();
+        const input = document.getElementById('message-input');
+        const value = input.value.trim();
+        if (!value) return;
+        
+        const convo = conversations.find(item => item.id === activeConversation);
+        convo.messages.push({ who: 'me', text: value });
+        input.value = '';
+        
+        renderConversations();
+    }
+
+    // --- Init ---
+    window.addEventListener('DOMContentLoaded', () => {
+        sessionManager.init();
+        renderListings('home-listings');
+        renderListings('explore-listings');
+        renderConversations();
+        
+        // Handle window resize for chat UI & Sidebar
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                document.getElementById('conv-sidebar').classList.remove('hidden');
+                document.getElementById('chat-area').classList.remove('hidden');
+                document.getElementById('chat-area').classList.add('flex');
+            }
+            if (window.innerWidth >= 1024) {
+                 document.getElementById('sidebar').classList.remove('-translate-x-full');
+                 document.getElementById('sidebar').classList.add('translate-x-0');
+                 document.getElementById('sidebar-overlay').classList.add('hidden');
+            } else {
+                 document.getElementById('sidebar').classList.add('-translate-x-full');
+                 document.getElementById('sidebar').classList.remove('translate-x-0');
+            }
+        });
+    });
+</script>
 </body>
 </html>
