@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config/config.php';
+require_once __DIR__ . '/config/app.php';
 
 // Already logged in? Send user to their dashboard.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_SESSION['user_id'])) {
@@ -24,9 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_SESSION['user_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $data = json_decode(file_get_contents('php://input'), true);
+    $data = is_array($data) ? $data : [];
     $action = $data['action'] ?? '';
 
     try {
+        if (!thikana_db()) {
+            echo json_encode(['status' => 'error', 'message' => 'Database connection is not available.']);
+            exit;
+        }
+
         // -- SIGNUP LOGIC --
         if ($action === 'signup') {
             // Whitelist valid roles
@@ -112,8 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             exit;
         }
-    } catch (PDOException $e) {
-        error_log("Database Error: " . $e->getMessage());
+    } catch (Throwable $e) {
+        error_log("Login Error: " . $e->getMessage());
         echo json_encode(['status' => 'error', 'message' => 'A server error occurred. Please try again later.']);
         exit;
     }
