@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Thikana - Rent Affordability & Roommate Finder</title>
-    <link rel="stylesheet" href="assets/css/index.css">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,78 @@
     
     <!-- Tailwind CSS (CDN for single-file implementation) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="assets/js/index.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            primary: '#4F46E5',    /* Indigo */
+                            hover: '#4338CA',
+                            secondary: '#F97316',  /* Warm Orange Accent */
+                            light: '#EEF2FF',
+                        },
+                        surface: '#FFFFFF',
+                        bg: '#F8FAFC',
+                        text: {
+                            main: '#0F172A',
+                            muted: '#64748B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom base styles to complement Tailwind */
+        body {
+            background-color: theme('colors.bg');
+            color: theme('colors.text.main');
+            overflow-x: hidden;
+        }
+        
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, theme('colors.brand.primary'), theme('colors.brand.secondary'));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Image overlay gradient */
+        .img-overlay::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0) 50%);
+            border-radius: inherit;
+        }
+    </style>
 </head>
 <body class="antialiased selection:bg-brand-primary selection:text-white">
 
@@ -101,7 +172,7 @@
                     </p>
                     
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="login.html" class="bg-brand-primary hover:bg-brand-hover text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-brand-primary/20 transition-transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                        <a href="dashboard_index.html" class="bg-brand-primary hover:bg-brand-hover text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-brand-primary/20 transition-transform hover:-translate-y-1 flex items-center justify-center gap-2">
                             Manage Your Expenses
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                         </a>
@@ -409,5 +480,78 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Mobile Menu Logic ---
+            const btn = document.getElementById('mobile-menu-btn');
+            const menu = document.getElementById('mobile-menu');
+            const mobileLinks = document.querySelectorAll('.mobile-link');
+
+            // Toggle menu
+            btn.addEventListener('click', () => {
+                menu.classList.toggle('hidden');
+            });
+
+            // Close menu when a link is clicked
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    menu.classList.add('hidden');
+                });
+            });
+
+            // --- Navbar Scroll Effect ---
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('shadow-sm');
+                    navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                } else {
+                    navbar.classList.remove('shadow-sm');
+                    navbar.style.background = 'rgba(255, 255, 255, 0.85)';
+                }
+            });
+
+            // --- Contact Form Simulation Logic ---
+            const contactForm = document.getElementById('contactForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const formSuccess = document.getElementById('formSuccess');
+
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevent page reload
+                
+                // UX: Change button state
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                `;
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+                // Simulate network request delay (1.5 seconds)
+                setTimeout(() => {
+                    // Reset button
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    
+                    // Show success message and hide form inputs conceptually
+                    // For this demo, we'll just clear inputs and show the alert
+                    contactForm.reset();
+                    formSuccess.classList.remove('hidden');
+                    
+                    // Hide success message after 5 seconds
+                    setTimeout(() => {
+                        formSuccess.classList.add('hidden');
+                    }, 5000);
+                    
+                }, 1500);
+            });
+        });
+    </script>
 </body>
 </html>
