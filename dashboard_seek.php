@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/app.php';
 
 // User must be logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,7 +11,6 @@ if (!isset($_SESSION['user_id'])) {
 // Seeker dashboard can only be accessed by seekers
 if (($_SESSION['role'] ?? 'seeker') !== 'seeker') {
     if (($_SESSION['role'] ?? '') === 'host') {
-        require_once __DIR__ . '/config/config.php';
         if(function_exists('thikana_host_dashboard_redirect')){
              header('Location: ' . thikana_host_dashboard_redirect($_SESSION['user_id']));
         }
@@ -38,26 +38,36 @@ $thikanaUser = [
 $recommendedProperties = [];
 $allProperties = [];
 $db_error = null;
+$pdo = thikana_db();
 
 try {
-    // Use your actual DB credentials here (usually loaded from config.php)
-    $db_host = defined('DB_HOST') ? DB_HOST : 'localhost';
-    $db_name = defined('DB_NAME') ? DB_NAME : 'thikana_db'; 
-    $db_user = defined('DB_USER') ? DB_USER : 'root';
-    $db_pass = defined('DB_PASS') ? DB_PASS : '';
+    if (!$pdo) {
+        throw new RuntimeException('Database connection is not available.');
+    }
 
-    // Create PDO connection
-    $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $tableExists = function (string $tableName) use ($pdo): bool {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = ?'
+        );
+        $stmt->execute([$tableName]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    };
+
+    $hasPropertyImages = $tableExists('property_images');
+    $hasPropertyAmenities = $tableExists('property_amenities');
+    $mainImageSelect = $hasPropertyImages
+        ? "COALESCE((SELECT image_path FROM property_images pi WHERE pi.property_id = p.id AND pi.is_primary = 1 LIMIT 1), p.image_path) AS main_image"
+        : "p.image_path AS main_image";
+    $amenitiesSelect = $hasPropertyAmenities
+        ? ", (SELECT GROUP_CONCAT(name SEPARATOR ', ') FROM property_amenities WHERE property_id = p.id) AS amenities_list"
+        : ", p.amenities AS amenities_list";
 
     // 1. Fetch Recommended Properties (Active, has rooms, ordered by newest)
     $stmtRec = $pdo->prepare("
-        SELECT p.*, 
-               COALESCE(
-                   (SELECT image_path FROM property_images pi WHERE pi.property_id = p.id AND pi.is_primary = 1 LIMIT 1), 
-                   p.image_path
-               ) as main_image
+        SELECT p.*, $mainImageSelect
         FROM properties p
         WHERE p.status = 'active' AND p.available_rooms > 0
         ORDER BY p.created_at DESC
@@ -68,12 +78,7 @@ try {
 
     // 2. Fetch All Properties for the 'Explore' section (For JS filtering)
     $stmtAll = $pdo->prepare("
-        SELECT p.*, 
-               COALESCE(
-                   (SELECT image_path FROM property_images pi WHERE pi.property_id = p.id AND pi.is_primary = 1 LIMIT 1), 
-                   p.image_path
-               ) as main_image,
-               (SELECT GROUP_CONCAT(name SEPARATOR ', ') FROM property_amenities WHERE property_id = p.id) as amenities_list
+        SELECT p.*, $mainImageSelect $amenitiesSelect
         FROM properties p
         WHERE p.status = 'active'
         ORDER BY p.created_at DESC
@@ -81,9 +86,9 @@ try {
     $stmtAll->execute();
     $allProperties = $stmtAll->fetchAll();
 
-} catch (PDOException $e) {
-    // Graceful fallback if DB is not connected yet
-    $db_error = "Database connection pending setup. Showing empty state.";
+} catch (Throwable $e) {
+    error_log('Seeker dashboard property fetch failed: ' . $e->getMessage());
+    $db_error = "Unable to load properties from the database. Please check the database connection.";
 }
 
 // Helper function for placeholder images if none exists in DB
