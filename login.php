@@ -8,68 +8,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $action = $data['action'] ?? '';
 
-    // -- SIGNUP LOGIC --
-    if ($action === 'signup') {
-        $role = $data['role'] ?? 'seeker';
-        $first = trim($data['first_name'] ?? '');
-        $last = trim($data['last_name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $phone = trim($data['phone'] ?? '');
-        $password = $data['password'] ?? '';
+    try {
+        // -- SIGNUP LOGIC --
+        if ($action === 'signup') {
+            // Whitelist valid roles
+            $role = in_array($data['role'] ?? '', ['seeker', 'host']) ? $data['role'] : 'seeker';
+            
+            // Sanitize & validate inputs
+            $first = trim(htmlspecialchars($data['first_name'] ?? ''));
+            $last = trim(htmlspecialchars($data['last_name'] ?? ''));
+            $email = filter_var(trim($data['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+            $phone = trim(htmlspecialchars($data['phone'] ?? ''));
+            $password = $data['password'] ?? '';
 
-        if(empty($first) || empty($last) || empty($email) || empty($password)) {
-            echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
+            if (empty($first) || empty($last) || empty($email) || empty($password)) {
+                echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
+                exit;
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid email address format.']);
+                exit;
+            }
+
+            if (strlen($password) < 8) {
+                echo json_encode(['status' => 'error', 'message' => 'Password must be at least 8 characters long.']);
+                exit;
+            }
+
+            // Check for duplicate email
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                echo json_encode(['status' => 'error', 'message' => 'This email is already registered.']);
+                exit;
+            }
+
+            // Hash password and insert
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (role, first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?, ?)");
+            
+            if ($stmt->execute([$role, $first, $last, $email, $phone, $hashedPassword])) {
+                echo json_encode(['status' => 'success', 'message' => 'Account created successfully! Please log in.']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Registration failed. Please try again.']);
+            }
             exit;
         }
 
-        // Check for duplicate email
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        if($stmt->fetch()) {
-            echo json_encode(['status' => 'error', 'message' => 'This email is already registered.']);
+        // -- LOGIN LOGIC --
+        if ($action === 'login') {
+            $email = filter_var(trim($data['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+            $password = $data['password'] ?? '';
+
+            if (empty($email) || empty($password)) {
+                echo json_encode(['status' => 'error', 'message' => 'Email and password are required.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            // Verify user exists and password matches
+            if ($user && password_verify($password, $user['password'])) {
+                // Regenerate session ID to prevent session fixation attacks
+                session_regenerate_id(true);
+
+                // Set secure session data
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['first_name'] = $user['first_name'];
+                
+                // Role-Based Access Control routing
+                $redirect = ($user['role'] === 'host') ? 'dashboard_host.php' : 'dashboard_seek.php';
+                
+                echo json_encode(['status' => 'success', 'message' => 'Login successful!', 'redirect' => $redirect]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
+            }
             exit;
         }
-
-        // Hash password and insert
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (role, first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?, ?)");
-        
-        if($stmt->execute([$role, $first, $last, $email, $phone, $hashedPassword])) {
-            echo json_encode(['status' => 'success', 'message' => 'Account created successfully! Please log in.']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Registration failed. Please try again.']);
-        }
-        exit;
-    }
-
-    // -- LOGIN LOGIC --
-    if ($action === 'login') {
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
-
-        // Verify user exists and password is correct
-        if($user && password_verify($password, $user['password'])) {
-            // Set secure session data
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['first_name'] = $user['first_name'];
-            
-            // RBAC Routing
-            $redirect = ($user['role'] === 'host') ? 'dashboard_host.php' : 'dashboard_seek.php';
-            
-            echo json_encode(['status' => 'success', 'message' => 'Login successful!', 'redirect' => $redirect]);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
-        }
+    } catch (PDOException $e) {
+        error_log("Database Error: " . $e->getMessage());
+        echo json_encode(['status' => 'error', 'message' => 'A server error occurred. Please try again later.']);
         exit;
     }
 }
 ?>
-
 <!-- Frontend View (GET) -->
 <!DOCTYPE html>
 <html lang="en">
@@ -351,7 +377,6 @@ function showAlert(id, msg, type) {
     el.style.display = 'block';
 }
 
-// Fetch API implementation matching the PHP backend
 async function handleAuth(e, action) {
     e.preventDefault();
     const btn = document.getElementById(`btn-${action}`);
@@ -367,7 +392,6 @@ async function handleAuth(e, action) {
 
     let payload = { action: action };
 
-    // Build payload based on action type
     if (action === 'login') {
         payload.email = document.getElementById('logEmail').value.trim();
         payload.password = document.getElementById('logPassword').value;
@@ -393,7 +417,6 @@ async function handleAuth(e, action) {
             showAlert(alertId, data.message, 'success');
             
             if (action === 'login') {
-                // PHP returned the correct RBAC dashboard route
                 setTimeout(() => window.location.href = data.redirect, 1000); 
             } else {
                 e.target.reset(); 
