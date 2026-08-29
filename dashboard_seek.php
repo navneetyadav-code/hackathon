@@ -309,17 +309,6 @@ $thikanaUser = [
                             <span class="text-brand-secondary drop-shadow-md">Your Room. Your Vibe. Your People.</span>
                         </h1>
                     </div>
-                    
-                    <div class="flex flex-row md:flex-col gap-4 w-full md:w-auto relative z-10">
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex-1 shadow-sm">
-                            <p class="text-indigo-100 text-xs uppercase font-bold tracking-wider mb-1">Matches Nearby</p>
-                            <p class="text-3xl font-bold text-white">12</p>
-                        </div>
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex-1 shadow-sm">
-                            <p class="text-indigo-100 text-xs uppercase font-bold tracking-wider mb-1">Avg Monthly Share</p>
-                            <p class="text-3xl font-bold text-white">₹8.5K</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="grid lg:grid-cols-3 gap-8 mb-8">
